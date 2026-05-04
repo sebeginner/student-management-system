@@ -1,0 +1,392 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// NHÓM 1: TÀI KHOẢN & PHÂN QUYỀN
+// ==========================================
+model Role {
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              Int              @id @default(autoincrement())
+  action          String           @unique
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int        @map("role_id")
+  permissionId Int        @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id            Int        @id @default(autoincrement())
+  username      String     @unique
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  fullName      String     @map("full_name")
+  status        String     @default("ACTIVE")
+  lastLoginAt   DateTime?  @map("last_login_at")
+  roleId        Int        @map("role_id")
+  studentId     Int?       @unique @map("student_id")
+  teacherId     Int?       @unique @map("teacher_id")
+  
+  role          Role       @relation(fields: [roleId], references: [id])
+  student       Student?   @relation(fields: [studentId], references: [id])
+  teacher       Teacher?   @relation(fields: [teacherId], references: [id])
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+// ==========================================
+// NHÓM 2: QUẢN LÝ HỌC VỤ
+// ==========================================
+model Student {
+  id            Int       @id @default(autoincrement())
+  studentCode   String    @unique @map("student_code")
+  fullName      String    @map("full_name")
+  gender        String
+  dateOfBirth   DateTime  @map("date_of_birth")
+  address       String?
+  email         String?
+  admissionDate DateTime  @map("admission_date")
+  status        String    @default("ACTIVE")
+  note          String?
+
+  user          User?
+  enrollments   StudentClassEnrollment[]
+  subjectScores StudentSubjectScore[]
+
+  @@map("students")
+}
+
+model Teacher {
+  id            Int       @id @default(autoincrement())
+  teacherCode   String    @unique @map("teacher_code")
+  fullName      String    @map("full_name")
+  email         String?
+  phone         String?
+  subjectId     Int       @map("subject_id")
+  status        String    @default("ACTIVE")
+
+  subject       Subject   @relation(fields: [subjectId], references: [id])
+  user          User?
+  classes       Class[]   @relation("HomeroomTeacher")
+  assignments   TeacherAssignment[]
+
+  @@map("teachers")
+}
+
+model SchoolYear {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
+  startYear     Int       @map("start_year")
+  endYear       Int       @map("end_year")
+  startDate     DateTime  @map("start_date")
+  endDate       DateTime  @map("end_date")
+  isActive      Boolean   @default(false) @map("is_active")
+
+  semesters     Semester[]
+  classes       Class[]
+  systemParams  SystemParameter[]
+  scoreWeights  ScoreWeight[]
+
+  @@map("school_years")
+}
+
+model Semester {
+  id            Int       @id @default(autoincrement())
+  name          String
+  startDate     DateTime  @map("start_date")
+  endDate       DateTime  @map("end_date")
+  isActive      Boolean   @default(false) @map("is_active")
+  schoolYearId  Int       @map("school_year_id")
+
+  schoolYear    SchoolYear @relation(fields: [schoolYearId], references: [id])
+  enrollments   StudentClassEnrollment[]
+  assignments   TeacherAssignment[]
+  scoreSheets   ScoreSheet[]
+  reports       SemesterReport[]
+  subjectReports SubjectReport[]
+
+  @@unique([schoolYearId, name])
+  @@map("semesters")
+}
+
+model GradeLevel {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
+  level         Int       @unique
+  isActive      Boolean   @default(true) @map("is_active")
+
+  classes       Class[]
+
+  @@map("grade_levels")
+}
+
+model Class {
+  id                Int       @id @default(autoincrement())
+  classCode         String    @unique @map("class_code")
+  name              String
+  maxSize           Int       @map("max_size")
+  currentSize       Int       @default(0) @map("current_size")
+  status            String    @default("ACTIVE")
+  gradeLevelId      Int       @map("grade_level_id")
+  schoolYearId      Int       @map("school_year_id")
+  homeroomTeacherId Int?      @map("homeroom_teacher_id")
+
+  gradeLevel        GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  schoolYear        SchoolYear @relation(fields: [schoolYearId], references: [id])
+  homeroomTeacher   Teacher?   @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+  
+  enrollments       StudentClassEnrollment[]
+  assignments       TeacherAssignment[]
+  scoreSheets       ScoreSheet[]
+  subjectRepDetails SubjectReportDetail[]
+  semesterRepDetails SemesterReportDetail[]
+
+  @@unique([schoolYearId, name])
+  @@map("classes")
+}
+
+model StudentClassEnrollment {
+  id                Int       @id @default(autoincrement())
+  studentId         Int       @map("student_id")
+  classId           Int       @map("class_id")
+  semesterId        Int       @map("semester_id")
+  enrolledAt        DateTime  @default(now()) @map("enrolled_at")
+  status            String    @default("ACTIVE")
+  semesterAverage   Float?    @map("semester_average")
+
+  student           Student   @relation(fields: [studentId], references: [id])
+  class             Class     @relation(fields: [classId], references: [id])
+  semester          Semester  @relation(fields: [semesterId], references: [id])
+
+  @@unique([studentId, semesterId])
+  @@map("student_class_enrollments")
+}
+
+model Subject {
+  id            Int       @id @default(autoincrement())
+  subjectCode   String    @unique @map("subject_code")
+  name          String
+  coefficient   Int       @default(1)
+  description   String?
+  isActive      Boolean   @default(true) @map("is_active")
+
+  teachers      Teacher[]
+  assignments   TeacherAssignment[]
+  scoreSheets   ScoreSheet[]
+  reports       SubjectReport[]
+
+  @@map("subjects")
+}
+
+model TeacherAssignment {
+  id              Int       @id @default(autoincrement())
+  teacherId       Int       @map("teacher_id")
+  classId         Int       @map("class_id")
+  subjectId       Int       @map("subject_id")
+  semesterId      Int       @map("semester_id")
+  assignmentType  String    @map("assignment_type")
+  createdBy       Int?      @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  teacher         Teacher   @relation(fields: [teacherId], references: [id])
+  class           Class     @relation(fields: [classId], references: [id])
+  subject         Subject   @relation(fields: [subjectId], references: [id])
+  semester        Semester  @relation(fields: [semesterId], references: [id])
+
+  @@unique([teacherId, classId, subjectId, semesterId])
+  @@map("teacher_assignments")
+}
+
+// ==========================================
+// NHÓM 3: ĐIỂM SỐ & QUY ĐỊNH HỆ SỐ
+// ==========================================
+model TestType {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique 
+  name          String
+  defaultWeight Int       @map("default_weight")
+  isMultiple    Boolean   @default(true) @map("is_multiple")
+
+  scoreWeights  ScoreWeight[]
+  scoreDetails  ScoreDetail[]
+
+  @@map("test_types")
+}
+
+model ScoreWeight {
+  id            Int       @id @default(autoincrement())
+  schoolYearId  Int       @map("school_year_id")
+  testTypeId    Int       @map("test_type_id")
+  weight        Int
+  effectiveFrom DateTime  @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+
+  schoolYear    SchoolYear @relation(fields: [schoolYearId], references: [id])
+  testType      TestType   @relation(fields: [testTypeId], references: [id])
+
+  @@map("score_weights")
+}
+
+model ScoreSheet {
+  id            Int       @id @default(autoincrement())
+  classId       Int       @map("class_id")
+  subjectId     Int       @map("subject_id")
+  semesterId    Int       @map("semester_id")
+  status        String    @default("DRAFT")
+  createdBy     Int?      @map("created_by")
+  lockedAt      DateTime? @map("locked_at")
+  submittedAt   DateTime? @map("submitted_at")
+
+  class         Class     @relation(fields: [classId], references: [id])
+  subject       Subject   @relation(fields: [subjectId], references: [id])
+  semester      Semester  @relation(fields: [semesterId], references: [id])
+  studentScores StudentSubjectScore[]
+
+  @@unique([classId, subjectId, semesterId])
+  @@map("score_sheets")
+}
+
+model StudentSubjectScore {
+  id            Int       @id @default(autoincrement())
+  scoreSheetId  Int       @map("score_sheet_id")
+  studentId     Int       @map("student_id")
+  averageScore  Float?    @map("average_score")
+  passStatus    Boolean?  @map("pass_status")
+  calculatedAt  DateTime? @map("calculated_at")
+
+  scoreSheet    ScoreSheet @relation(fields: [scoreSheetId], references: [id])
+  student       Student    @relation(fields: [studentId], references: [id])
+  scoreDetails  ScoreDetail[]
+
+  @@unique([scoreSheetId, studentId])
+  @@map("student_subject_scores")
+}
+
+model ScoreDetail {
+  id                    Int       @id @default(autoincrement())
+  studentSubjectScoreId Int       @map("student_subject_score_id")
+  testTypeId            Int       @map("test_type_id")
+  attemptNo             Int       @default(1) @map("attempt_no")
+  score                 Float
+  weightSnapshot        Int       @map("weight_snapshot")
+
+  studentSubjectScore   StudentSubjectScore @relation(fields: [studentSubjectScoreId], references: [id])
+  testType              TestType            @relation(fields: [testTypeId], references: [id])
+
+  @@unique([studentSubjectScoreId, testTypeId, attemptNo])
+  @@map("score_details")
+}
+
+// ==========================================
+// NHÓM 4: BÁO CÁO TỔNG KẾT
+// ==========================================
+model SubjectReport {
+  id            Int       @id @default(autoincrement())
+  subjectId     Int       @map("subject_id")
+  semesterId    Int       @map("semester_id")
+  generatedAt   DateTime  @default(now()) @map("generated_at")
+  
+  subject       Subject   @relation(fields: [subjectId], references: [id])
+  semester      Semester  @relation(fields: [semesterId], references: [id])
+  details       SubjectReportDetail[]
+
+  @@map("subject_reports")
+}
+
+model SubjectReportDetail {
+  id               Int       @id @default(autoincrement())
+  subjectReportId  Int       @map("subject_report_id")
+  classId          Int       @map("class_id")
+  studentCount     Int       @map("student_count")
+  passCount        Int       @map("pass_count")
+  passRate         Float     @map("pass_rate")
+
+  subjectReport    SubjectReport @relation(fields: [subjectReportId], references: [id])
+  class            Class         @relation(fields: [classId], references: [id])
+
+  @@map("subject_report_details")
+}
+
+model SemesterReport {
+  id            Int       @id @default(autoincrement())
+  semesterId    Int       @map("semester_id")
+  generatedAt   DateTime  @default(now()) @map("generated_at")
+
+  semester      Semester  @relation(fields: [semesterId], references: [id])
+  details       SemesterReportDetail[]
+
+  @@map("semester_reports")
+}
+
+model SemesterReportDetail {
+  id               Int       @id @default(autoincrement())
+  semesterReportId Int       @map("semester_report_id")
+  classId          Int       @map("class_id")
+  studentCount     Int       @map("student_count")
+  passCount        Int       @map("pass_count")
+  passRate         Float     @map("pass_rate")
+
+  semesterReport   SemesterReport @relation(fields: [semesterReportId], references: [id])
+  class            Class          @relation(fields: [classId], references: [id])
+
+  @@map("semester_report_details")
+}
+
+// ==========================================
+// NHÓM 5: THAM SỐ HỆ THỐNG & KỸ THUẬT
+// ==========================================
+model SystemParameter {
+  id                  Int       @id @default(autoincrement())
+  schoolYearId        Int       @map("school_year_id")
+  minAge              Int       @map("min_age")
+  maxAge              Int       @map("max_age")
+  maxClassSize        Int       @map("max_class_size")
+  minScore            Float     @map("min_score")
+  maxScore            Float     @map("max_score")
+  subjectPassScore    Float     @map("subject_pass_score")
+  semesterPassScore   Float     @map("semester_pass_score")
+  effectiveFrom       DateTime  @map("effective_from")
+  effectiveTo         DateTime? @map("effective_to")
+
+  schoolYear          SchoolYear @relation(fields: [schoolYearId], references: [id])
+
+  @@map("system_parameters")
+}
+
+model AuditLog {
+  id            Int       @id @default(autoincrement())
+  userId        Int?      @map("user_id")
+  action        String
+  entityType    String    @map("entity_type")
+  entityId      Int?      @map("entity_id")
+  oldValue      String?   @db.Text @map("old_value")
+  newValue      String?   @db.Text @map("new_value")
+  ipAddress     String?   @map("ip_address")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user          User?     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
