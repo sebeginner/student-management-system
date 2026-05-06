@@ -31,6 +31,23 @@
 $ npm install
 ```
 
+## Environment & Seed demo
+1. Copy env template:
+```powershell
+Copy-Item .env.example .env
+```
+2. Set `DATABASE_URL` trong file `.env` (PostgreSQL).
+3. Chạy migration và seed dữ liệu demo:
+```bash
+npx prisma migrate deploy
+npm run prisma:seed
+```
+
+Sau khi seed xong có thể đăng nhập ngay với (mặc định theo `backend/.env.example`):
+- `admin` / `Admin@123`
+- `teacher01` / `Teacher@123`
+- `student01` / `Student@123`
+
 ## Compile and run the project
 
 ```bash
