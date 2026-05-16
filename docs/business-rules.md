@@ -11,7 +11,7 @@ Tài liệu này là nguồn tham chiếu chính cho backend service và QA khi 
 | BR-AUTH-03 | Mật khẩu phải được hash, không lưu plain text | Must |
 | BR-AUTH-04 | Chỉ tài khoản ACTIVE mới được đăng nhập | Must |
 | BR-AUTH-05 | API nghiệp vụ phải yêu cầu JWT hợp lệ | Must |
-| BR-AUTH-06 | Role MVP gồm ADMIN, TEACHER, STUDENT | Must |
+| BR-AUTH-06 | Role hệ thống gồm ADMIN, ACADEMIC_STAFF, MANAGER, TEACHER, STUDENT | Must |
 
 ## 2. Quy tắc học sinh
 
@@ -61,7 +61,17 @@ Tài liệu này là nguồn tham chiếu chính cho backend service và QA khi 
 | BR-SEM-03 | Ngày bắt đầu phải nhỏ hơn ngày kết thúc | Áp dụng cho năm học và học kỳ | Must |
 | BR-SEM-04 | Chỉ có một năm học/học kỳ active tại một thời điểm nếu nhóm chọn quy tắc này | Should |
 
-## 7. Quy tắc điểm số
+## 7. Quy tắc phân công giáo viên
+
+| Mã | Quy tắc | Diễn giải | Ưu tiên |
+|---|---|---|---|
+| BR-TA-01 | GVCN và GVBM là assignment của TEACHER | Không tạo role đăng nhập riêng cho GVCN/GVBM | Must |
+| BR-TA-02 | Assignment HOMEROOM không gắn môn/học kỳ | `subjectId = null`, `semesterId = null` | Must |
+| BR-TA-03 | Assignment SUBJECT bắt buộc có lớp, môn, học kỳ | `classId`, `subjectId`, `semesterId` đều có giá trị | Must |
+| BR-TA-04 | Một lớp chỉ có một GVCN active | Enforce bằng partial unique index theo class cho HOMEROOM | Must |
+| BR-TA-05 | Một lớp/môn/học kỳ chỉ có một GVBM chính | Enforce bằng partial unique index theo class/subject/semester cho SUBJECT | Must |
+
+## 8. Quy tắc điểm số
 
 | Mã | Quy tắc | Diễn giải | Ưu tiên |
 |---|---|---|---|
@@ -70,9 +80,19 @@ Tài liệu này là nguồn tham chiếu chính cho backend service và QA khi 
 | BR-SCO-03 | Một bảng điểm là duy nhất theo lớp, môn, học kỳ | Theo unique `[classId, subjectId, semesterId]` | Must |
 | BR-SCO-04 | Một học sinh chỉ có một dòng điểm trong một bảng điểm | Theo unique `[scoreSheetId, studentId]` | Must |
 | BR-SCO-05 | Một loại kiểm tra có thể có nhiều lần nếu `isMultiple=true` | Ví dụ miệng/15 phút, 1 tiết | Should |
-| BR-SCO-06 | Không sửa bảng điểm đã khóa nếu không có quyền Admin | Dựa vào `status`, `lockedAt` | Should |
+| BR-SCO-06 | Không sửa trực tiếp bảng điểm đã khóa | GVBM phải tạo yêu cầu sửa điểm; Giáo vụ duyệt/từ chối | Must |
 
-## 8. Công thức tính điểm MVP
+## 9. Quy tắc yêu cầu sửa điểm
+
+| Mã | Quy tắc | Diễn giải | Ưu tiên |
+|---|---|---|---|
+| BR-SCR-01 | Chỉ tạo yêu cầu sửa điểm cho bảng điểm đã khóa | Dựa vào `ScoreSheet.status = LOCKED` khi implement service | Must |
+| BR-SCR-02 | Yêu cầu phải lưu điểm cũ, điểm mới, lý do | Lưu trong `score_change_requests` | Must |
+| BR-SCR-03 | Không tạo trùng yêu cầu đang chờ duyệt | Partial unique index cho status PENDING | Must |
+| BR-SCR-04 | Duyệt yêu cầu thì cập nhật điểm và tính lại trung bình | Thực hiện trong transaction khi implement service | Must |
+| BR-SCR-05 | Từ chối yêu cầu thì giữ nguyên điểm cũ và lưu lý do | Cập nhật status REJECTED, `reviewNote` | Must |
+
+## 10. Công thức tính điểm MVP
 
 Theo báo cáo môn học:
 
@@ -91,7 +111,7 @@ Quy ước test type MVP:
 | MIDTERM | Giữa kỳ | 3 | Không |
 | FINAL | Cuối kỳ | 3 | Không |
 
-## 9. Quy tắc đạt/không đạt
+## 11. Quy tắc đạt/không đạt
 
 | Mã | Quy tắc | Diễn giải |
 |---|---|---|
@@ -99,7 +119,7 @@ Quy ước test type MVP:
 | BR-PASS-02 | Đạt học kỳ nếu ĐTB học kỳ >= `semesterPassScore` | Mặc định 5.0 |
 | BR-PASS-03 | Tỉ lệ đạt = số lượng đạt / sĩ số * 100 | Làm tròn 2 chữ số nếu cần |
 
-## 10. Quy tắc báo cáo
+## 12. Quy tắc báo cáo
 
 | Mã | Quy tắc | Diễn giải |
 |---|---|---|
@@ -108,7 +128,7 @@ Quy ước test type MVP:
 | BR-RPT-03 | Nếu chưa có dữ liệu, trả mảng rỗng hoặc số liệu 0 | Không crash API |
 | BR-RPT-04 | Báo cáo có thể tính động trong MVP | Không bắt buộc lưu vào bảng report nếu thiếu thời gian |
 
-## 11. Quy tắc tham số
+## 13. Quy tắc tham số
 
 | Mã | Quy tắc | Diễn giải |
 |---|---|---|
@@ -118,7 +138,7 @@ Quy ước test type MVP:
 | BR-PAR-04 | Điểm đạt nằm trong khoảng điểm | Ví dụ 5 nằm trong 0-10 |
 | BR-PAR-05 | Tham số gắn với năm học | Theo `schoolYearId` |
 
-## 12. Quy tắc ghi log
+## 14. Quy tắc ghi log
 
 Các thao tác nên ghi log:
 

@@ -1,0 +1,9 @@
+export const VIEW_ACADEMIC_ROLES = [
+  'ADMIN',
+  'ACADEMIC_STAFF',
+  'MANAGER',
+  'TEACHER',
+  'STUDENT',
+];
+
+export const MANAGE_ACADEMIC_ROLES = ['ADMIN', 'ACADEMIC_STAFF'];

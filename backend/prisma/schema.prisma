@@ -6,6 +6,18 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TeacherAssignmentType {
+  HOMEROOM
+  SUBJECT
+}
+
+enum ScoreSheetStatus {
+  DRAFT
+  SUBMITTED
+  LOCKED
+  NEEDS_CORRECTION
+}
+
 // ==========================================
 // NHÓM 1: TÀI KHOẢN & PHÂN QUYỀN
 // ==========================================
@@ -37,21 +49,23 @@ model RolePermission {
 }
 
 model User {
-  id            Int        @id @default(autoincrement())
-  username      String     @unique
-  email         String     @unique
-  passwordHash  String     @map("password_hash")
-  fullName      String     @map("full_name")
-  status        String     @default("ACTIVE")
-  lastLoginAt   DateTime?  @map("last_login_at")
-  roleId        Int        @map("role_id")
-  studentId     Int?       @unique @map("student_id")
-  teacherId     Int?       @unique @map("teacher_id")
-  
-  role          Role       @relation(fields: [roleId], references: [id])
-  student       Student?   @relation(fields: [studentId], references: [id])
-  teacher       Teacher?   @relation(fields: [teacherId], references: [id])
-  auditLogs     AuditLog[]
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  fullName     String    @map("full_name")
+  status       String    @default("ACTIVE")
+  lastLoginAt  DateTime? @map("last_login_at")
+  roleId       Int       @map("role_id")
+  studentId    Int?      @unique @map("student_id")
+  teacherId    Int?      @unique @map("teacher_id")
+
+  role                  Role                 @relation(fields: [roleId], references: [id])
+  student               Student?             @relation(fields: [studentId], references: [id])
+  teacher               Teacher?             @relation(fields: [teacherId], references: [id])
+  auditLogs             AuditLog[]
+  requestedScoreChanges ScoreChangeRequest[] @relation("RequestedScoreChanges")
+  reviewedScoreChanges  ScoreChangeRequest[] @relation("ReviewedScoreChanges")
 
   @@map("users")
 }
@@ -60,15 +74,15 @@ model User {
 // NHÓM 2: QUẢN LÝ HỌC VỤ
 // ==========================================
 model Student {
-  id            Int       @id @default(autoincrement())
-  studentCode   String    @unique @map("student_code")
-  fullName      String    @map("full_name")
+  id            Int      @id @default(autoincrement())
+  studentCode   String   @unique @map("student_code")
+  fullName      String   @map("full_name")
   gender        String
-  dateOfBirth   DateTime  @map("date_of_birth")
+  dateOfBirth   DateTime @map("date_of_birth")
   address       String?
   email         String?
-  admissionDate DateTime  @map("admission_date")
-  status        String    @default("ACTIVE")
+  admissionDate DateTime @map("admission_date")
+  status        String   @default("ACTIVE")
   note          String?
 
   user          User?
@@ -79,52 +93,53 @@ model Student {
 }
 
 model Teacher {
-  id            Int       @id @default(autoincrement())
-  teacherCode   String    @unique @map("teacher_code")
-  fullName      String    @map("full_name")
-  email         String?
-  phone         String?
-  subjectId     Int       @map("subject_id")
-  status        String    @default("ACTIVE")
+  id          Int     @id @default(autoincrement())
+  teacherCode String  @unique @map("teacher_code")
+  fullName    String  @map("full_name")
+  email       String?
+  phone       String?
+  subjectId   Int     @map("subject_id")
+  status      String  @default("ACTIVE")
 
-  subject       Subject   @relation(fields: [subjectId], references: [id])
-  user          User?
-  classes       Class[]   @relation("HomeroomTeacher")
-  assignments   TeacherAssignment[]
+  subject     Subject             @relation(fields: [subjectId], references: [id])
+  user        User?
+  classes     Class[]             @relation("HomeroomTeacher")
+  assignments TeacherAssignment[]
 
   @@map("teachers")
 }
 
 model SchoolYear {
-  id            Int       @id @default(autoincrement())
-  name          String    @unique
-  startYear     Int       @map("start_year")
-  endYear       Int       @map("end_year")
-  startDate     DateTime  @map("start_date")
-  endDate       DateTime  @map("end_date")
-  isActive      Boolean   @default(false) @map("is_active")
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  startYear Int      @map("start_year")
+  endYear   Int      @map("end_year")
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  isActive  Boolean  @default(false) @map("is_active")
 
-  semesters     Semester[]
-  classes       Class[]
-  systemParams  SystemParameter[]
-  scoreWeights  ScoreWeight[]
+  semesters    Semester[]
+  classes      Class[]
+  assignments  TeacherAssignment[]
+  systemParams SystemParameter[]
+  scoreWeights ScoreWeight[]
 
   @@map("school_years")
 }
 
 model Semester {
-  id            Int       @id @default(autoincrement())
-  name          String
-  startDate     DateTime  @map("start_date")
-  endDate       DateTime  @map("end_date")
-  isActive      Boolean   @default(false) @map("is_active")
-  schoolYearId  Int       @map("school_year_id")
+  id           Int      @id @default(autoincrement())
+  name         String
+  startDate    DateTime @map("start_date")
+  endDate      DateTime @map("end_date")
+  isActive     Boolean  @default(false) @map("is_active")
+  schoolYearId Int      @map("school_year_id")
 
-  schoolYear    SchoolYear @relation(fields: [schoolYearId], references: [id])
-  enrollments   StudentClassEnrollment[]
-  assignments   TeacherAssignment[]
-  scoreSheets   ScoreSheet[]
-  reports       SemesterReport[]
+  schoolYear     SchoolYear               @relation(fields: [schoolYearId], references: [id])
+  enrollments    StudentClassEnrollment[]
+  assignments    TeacherAssignment[]
+  scoreSheets    ScoreSheet[]
+  reports        SemesterReport[]
   subjectReports SubjectReport[]
 
   @@unique([schoolYearId, name])
@@ -132,35 +147,35 @@ model Semester {
 }
 
 model GradeLevel {
-  id            Int       @id @default(autoincrement())
-  name          String    @unique
-  level         Int       @unique
-  isActive      Boolean   @default(true) @map("is_active")
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  level    Int     @unique
+  isActive Boolean @default(true) @map("is_active")
 
-  classes       Class[]
+  classes Class[]
 
   @@map("grade_levels")
 }
 
 model Class {
-  id                Int       @id @default(autoincrement())
-  classCode         String    @unique @map("class_code")
+  id                Int    @id @default(autoincrement())
+  classCode         String @unique @map("class_code")
   name              String
-  maxSize           Int       @map("max_size")
-  currentSize       Int       @default(0) @map("current_size")
-  status            String    @default("ACTIVE")
-  gradeLevelId      Int       @map("grade_level_id")
-  schoolYearId      Int       @map("school_year_id")
-  homeroomTeacherId Int?      @map("homeroom_teacher_id")
+  maxSize           Int    @map("max_size")
+  currentSize       Int    @default(0) @map("current_size")
+  status            String @default("ACTIVE")
+  gradeLevelId      Int    @map("grade_level_id")
+  schoolYearId      Int    @map("school_year_id")
+  homeroomTeacherId Int?   @map("homeroom_teacher_id")
 
-  gradeLevel        GradeLevel @relation(fields: [gradeLevelId], references: [id])
-  schoolYear        SchoolYear @relation(fields: [schoolYearId], references: [id])
-  homeroomTeacher   Teacher?   @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
-  
-  enrollments       StudentClassEnrollment[]
-  assignments       TeacherAssignment[]
-  scoreSheets       ScoreSheet[]
-  subjectRepDetails SubjectReportDetail[]
+  gradeLevel      GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  schoolYear      SchoolYear @relation(fields: [schoolYearId], references: [id])
+  homeroomTeacher Teacher?   @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+
+  enrollments        StudentClassEnrollment[]
+  assignments        TeacherAssignment[]
+  scoreSheets        ScoreSheet[]
+  subjectRepDetails  SubjectReportDetail[]
   semesterRepDetails SemesterReportDetail[]
 
   @@unique([schoolYearId, name])
@@ -168,54 +183,64 @@ model Class {
 }
 
 model StudentClassEnrollment {
-  id                Int       @id @default(autoincrement())
-  studentId         Int       @map("student_id")
-  classId           Int       @map("class_id")
-  semesterId        Int       @map("semester_id")
-  enrolledAt        DateTime  @default(now()) @map("enrolled_at")
-  status            String    @default("ACTIVE")
-  semesterAverage   Float?    @map("semester_average")
+  id              Int       @id @default(autoincrement())
+  studentId       Int       @map("student_id")
+  classId         Int       @map("class_id")
+  semesterId      Int       @map("semester_id")
+  enrolledAt      DateTime  @default(now()) @map("enrolled_at")
+  endedAt         DateTime? @map("ended_at")
+  status          String    @default("ACTIVE")
+  reason          String?   @db.Text
+  semesterAverage Float?    @map("semester_average")
 
-  student           Student   @relation(fields: [studentId], references: [id])
-  class             Class     @relation(fields: [classId], references: [id])
-  semester          Semester  @relation(fields: [semesterId], references: [id])
+  student  Student  @relation(fields: [studentId], references: [id])
+  class    Class    @relation(fields: [classId], references: [id])
+  semester Semester @relation(fields: [semesterId], references: [id])
 
-  @@unique([studentId, semesterId])
+  @@index([studentId, semesterId, status])
+  @@index([classId, semesterId, status])
   @@map("student_class_enrollments")
 }
 
 model Subject {
-  id            Int       @id @default(autoincrement())
-  subjectCode   String    @unique @map("subject_code")
-  name          String
-  coefficient   Int       @default(1)
-  description   String?
-  isActive      Boolean   @default(true) @map("is_active")
+  id          Int     @id @default(autoincrement())
+  subjectCode String  @unique @map("subject_code")
+  name        String
+  coefficient Int     @default(1)
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
 
-  teachers      Teacher[]
-  assignments   TeacherAssignment[]
-  scoreSheets   ScoreSheet[]
-  reports       SubjectReport[]
+  teachers    Teacher[]
+  assignments TeacherAssignment[]
+  scoreSheets ScoreSheet[]
+  reports     SubjectReport[]
 
   @@map("subjects")
 }
 
 model TeacherAssignment {
-  id              Int       @id @default(autoincrement())
-  teacherId       Int       @map("teacher_id")
-  classId         Int       @map("class_id")
-  subjectId       Int       @map("subject_id")
-  semesterId      Int       @map("semester_id")
-  assignmentType  String    @map("assignment_type")
-  createdBy       Int?      @map("created_by")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  id             Int                   @id @default(autoincrement())
+  teacherId      Int                   @map("teacher_id")
+  classId        Int                   @map("class_id")
+  subjectId      Int?                  @map("subject_id")
+  schoolYearId   Int                   @map("school_year_id")
+  semesterId     Int?                  @map("semester_id")
+  assignmentType TeacherAssignmentType @map("assignment_type")
+  isActive       Boolean               @default(true) @map("is_active")
+  createdBy      Int?                  @map("created_by")
+  createdAt      DateTime              @default(now()) @map("created_at")
 
-  teacher         Teacher   @relation(fields: [teacherId], references: [id])
-  class           Class     @relation(fields: [classId], references: [id])
-  subject         Subject   @relation(fields: [subjectId], references: [id])
-  semester        Semester  @relation(fields: [semesterId], references: [id])
+  teacher    Teacher    @relation(fields: [teacherId], references: [id])
+  class      Class      @relation(fields: [classId], references: [id])
+  subject    Subject?   @relation(fields: [subjectId], references: [id])
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id])
+  semester   Semester?  @relation(fields: [semesterId], references: [id])
 
-  @@unique([teacherId, classId, subjectId, semesterId])
+  @@index([assignmentType])
+  @@index([schoolYearId, assignmentType, isActive])
+  @@index([teacherId, assignmentType])
+  @@index([classId, assignmentType])
+  @@index([classId, subjectId, semesterId, assignmentType, isActive])
   @@map("teacher_assignments")
 }
 
@@ -223,14 +248,15 @@ model TeacherAssignment {
 // NHÓM 3: ĐIỂM SỐ & QUY ĐỊNH HỆ SỐ
 // ==========================================
 model TestType {
-  id            Int       @id @default(autoincrement())
-  code          String    @unique 
+  id            Int     @id @default(autoincrement())
+  code          String  @unique
   name          String
-  defaultWeight Int       @map("default_weight")
-  isMultiple    Boolean   @default(true) @map("is_multiple")
+  defaultWeight Int     @map("default_weight")
+  isMultiple    Boolean @default(true) @map("is_multiple")
 
-  scoreWeights  ScoreWeight[]
-  scoreDetails  ScoreDetail[]
+  scoreWeights        ScoreWeight[]
+  scoreDetails        ScoreDetail[]
+  scoreChangeRequests ScoreChangeRequest[]
 
   @@map("test_types")
 }
@@ -243,113 +269,148 @@ model ScoreWeight {
   effectiveFrom DateTime  @map("effective_from")
   effectiveTo   DateTime? @map("effective_to")
 
-  schoolYear    SchoolYear @relation(fields: [schoolYearId], references: [id])
-  testType      TestType   @relation(fields: [testTypeId], references: [id])
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id])
+  testType   TestType   @relation(fields: [testTypeId], references: [id])
 
   @@map("score_weights")
 }
 
 model ScoreSheet {
-  id            Int       @id @default(autoincrement())
-  classId       Int       @map("class_id")
-  subjectId     Int       @map("subject_id")
-  semesterId    Int       @map("semester_id")
-  status        String    @default("DRAFT")
-  createdBy     Int?      @map("created_by")
-  lockedAt      DateTime? @map("locked_at")
-  submittedAt   DateTime? @map("submitted_at")
+  id          Int              @id @default(autoincrement())
+  classId     Int              @map("class_id")
+  subjectId   Int              @map("subject_id")
+  semesterId  Int              @map("semester_id")
+  status      ScoreSheetStatus @default(DRAFT)
+  createdBy   Int?             @map("created_by")
+  lockedAt    DateTime?        @map("locked_at")
+  submittedAt DateTime?        @map("submitted_at")
 
-  class         Class     @relation(fields: [classId], references: [id])
-  subject       Subject   @relation(fields: [subjectId], references: [id])
-  semester      Semester  @relation(fields: [semesterId], references: [id])
-  studentScores StudentSubjectScore[]
+  class          Class                 @relation(fields: [classId], references: [id])
+  subject        Subject               @relation(fields: [subjectId], references: [id])
+  semester       Semester              @relation(fields: [semesterId], references: [id])
+  studentScores  StudentSubjectScore[]
+  changeRequests ScoreChangeRequest[]
 
   @@unique([classId, subjectId, semesterId])
   @@map("score_sheets")
 }
 
 model StudentSubjectScore {
-  id            Int       @id @default(autoincrement())
-  scoreSheetId  Int       @map("score_sheet_id")
-  studentId     Int       @map("student_id")
-  averageScore  Float?    @map("average_score")
-  passStatus    Boolean?  @map("pass_status")
-  calculatedAt  DateTime? @map("calculated_at")
+  id           Int       @id @default(autoincrement())
+  scoreSheetId Int       @map("score_sheet_id")
+  studentId    Int       @map("student_id")
+  averageScore Float?    @map("average_score")
+  passStatus   Boolean?  @map("pass_status")
+  calculatedAt DateTime? @map("calculated_at")
 
-  scoreSheet    ScoreSheet @relation(fields: [scoreSheetId], references: [id])
-  student       Student    @relation(fields: [studentId], references: [id])
-  scoreDetails  ScoreDetail[]
+  scoreSheet     ScoreSheet           @relation(fields: [scoreSheetId], references: [id])
+  student        Student              @relation(fields: [studentId], references: [id])
+  scoreDetails   ScoreDetail[]
+  changeRequests ScoreChangeRequest[]
 
   @@unique([scoreSheetId, studentId])
   @@map("student_subject_scores")
 }
 
 model ScoreDetail {
-  id                    Int       @id @default(autoincrement())
-  studentSubjectScoreId Int       @map("student_subject_score_id")
-  testTypeId            Int       @map("test_type_id")
-  attemptNo             Int       @default(1) @map("attempt_no")
+  id                    Int   @id @default(autoincrement())
+  studentSubjectScoreId Int   @map("student_subject_score_id")
+  testTypeId            Int   @map("test_type_id")
+  attemptNo             Int   @default(1) @map("attempt_no")
   score                 Float
-  weightSnapshot        Int       @map("weight_snapshot")
+  weightSnapshot        Int   @map("weight_snapshot")
 
-  studentSubjectScore   StudentSubjectScore @relation(fields: [studentSubjectScoreId], references: [id])
-  testType              TestType            @relation(fields: [testTypeId], references: [id])
+  studentSubjectScore StudentSubjectScore  @relation(fields: [studentSubjectScoreId], references: [id])
+  testType            TestType             @relation(fields: [testTypeId], references: [id])
+  changeRequests      ScoreChangeRequest[]
 
   @@unique([studentSubjectScoreId, testTypeId, attemptNo])
   @@map("score_details")
+}
+
+model ScoreChangeRequest {
+  id                    Int       @id @default(autoincrement())
+  scoreSheetId          Int       @map("score_sheet_id")
+  studentSubjectScoreId Int       @map("student_subject_score_id")
+  scoreDetailId         Int?      @map("score_detail_id")
+  testTypeId            Int       @map("test_type_id")
+  attemptNo             Int       @default(1) @map("attempt_no")
+  oldScore              Float     @map("old_score")
+  newScore              Float     @map("new_score")
+  reason                String    @db.Text
+  status                String    @default("PENDING")
+  requestedById         Int       @map("requested_by_id")
+  reviewedById          Int?      @map("reviewed_by_id")
+  reviewedAt            DateTime? @map("reviewed_at")
+  reviewNote            String?   @map("review_note") @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  scoreSheet          ScoreSheet          @relation(fields: [scoreSheetId], references: [id])
+  studentSubjectScore StudentSubjectScore @relation(fields: [studentSubjectScoreId], references: [id])
+  scoreDetail         ScoreDetail?        @relation(fields: [scoreDetailId], references: [id])
+  testType            TestType            @relation(fields: [testTypeId], references: [id])
+  requestedBy         User                @relation("RequestedScoreChanges", fields: [requestedById], references: [id])
+  reviewedBy          User?               @relation("ReviewedScoreChanges", fields: [reviewedById], references: [id])
+
+  @@index([status])
+  @@index([scoreSheetId, status])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@map("score_change_requests")
 }
 
 // ==========================================
 // NHÓM 4: BÁO CÁO TỔNG KẾT
 // ==========================================
 model SubjectReport {
-  id            Int       @id @default(autoincrement())
-  subjectId     Int       @map("subject_id")
-  semesterId    Int       @map("semester_id")
-  generatedAt   DateTime  @default(now()) @map("generated_at")
-  
-  subject       Subject   @relation(fields: [subjectId], references: [id])
-  semester      Semester  @relation(fields: [semesterId], references: [id])
-  details       SubjectReportDetail[]
+  id          Int      @id @default(autoincrement())
+  subjectId   Int      @map("subject_id")
+  semesterId  Int      @map("semester_id")
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  subject  Subject               @relation(fields: [subjectId], references: [id])
+  semester Semester              @relation(fields: [semesterId], references: [id])
+  details  SubjectReportDetail[]
 
   @@map("subject_reports")
 }
 
 model SubjectReportDetail {
-  id               Int       @id @default(autoincrement())
-  subjectReportId  Int       @map("subject_report_id")
-  classId          Int       @map("class_id")
-  studentCount     Int       @map("student_count")
-  passCount        Int       @map("pass_count")
-  passRate         Float     @map("pass_rate")
+  id              Int   @id @default(autoincrement())
+  subjectReportId Int   @map("subject_report_id")
+  classId         Int   @map("class_id")
+  studentCount    Int   @map("student_count")
+  passCount       Int   @map("pass_count")
+  passRate        Float @map("pass_rate")
 
-  subjectReport    SubjectReport @relation(fields: [subjectReportId], references: [id])
-  class            Class         @relation(fields: [classId], references: [id])
+  subjectReport SubjectReport @relation(fields: [subjectReportId], references: [id])
+  class         Class         @relation(fields: [classId], references: [id])
 
   @@map("subject_report_details")
 }
 
 model SemesterReport {
-  id            Int       @id @default(autoincrement())
-  semesterId    Int       @map("semester_id")
-  generatedAt   DateTime  @default(now()) @map("generated_at")
+  id          Int      @id @default(autoincrement())
+  semesterId  Int      @map("semester_id")
+  generatedAt DateTime @default(now()) @map("generated_at")
 
-  semester      Semester  @relation(fields: [semesterId], references: [id])
-  details       SemesterReportDetail[]
+  semester Semester               @relation(fields: [semesterId], references: [id])
+  details  SemesterReportDetail[]
 
   @@map("semester_reports")
 }
 
 model SemesterReportDetail {
-  id               Int       @id @default(autoincrement())
-  semesterReportId Int       @map("semester_report_id")
-  classId          Int       @map("class_id")
-  studentCount     Int       @map("student_count")
-  passCount        Int       @map("pass_count")
-  passRate         Float     @map("pass_rate")
+  id               Int   @id @default(autoincrement())
+  semesterReportId Int   @map("semester_report_id")
+  classId          Int   @map("class_id")
+  studentCount     Int   @map("student_count")
+  passCount        Int   @map("pass_count")
+  passRate         Float @map("pass_rate")
 
-  semesterReport   SemesterReport @relation(fields: [semesterReportId], references: [id])
-  class            Class          @relation(fields: [classId], references: [id])
+  semesterReport SemesterReport @relation(fields: [semesterReportId], references: [id])
+  class          Class          @relation(fields: [classId], references: [id])
 
   @@map("semester_report_details")
 }
@@ -358,35 +419,35 @@ model SemesterReportDetail {
 // NHÓM 5: THAM SỐ HỆ THỐNG & KỸ THUẬT
 // ==========================================
 model SystemParameter {
-  id                  Int       @id @default(autoincrement())
-  schoolYearId        Int       @map("school_year_id")
-  minAge              Int       @map("min_age")
-  maxAge              Int       @map("max_age")
-  maxClassSize        Int       @map("max_class_size")
-  minScore            Float     @map("min_score")
-  maxScore            Float     @map("max_score")
-  subjectPassScore    Float     @map("subject_pass_score")
-  semesterPassScore   Float     @map("semester_pass_score")
-  effectiveFrom       DateTime  @map("effective_from")
-  effectiveTo         DateTime? @map("effective_to")
+  id                Int       @id @default(autoincrement())
+  schoolYearId      Int       @unique @map("school_year_id")
+  minAge            Int       @map("min_age")
+  maxAge            Int       @map("max_age")
+  maxClassSize      Int       @map("max_class_size")
+  minScore          Float     @map("min_score")
+  maxScore          Float     @map("max_score")
+  subjectPassScore  Float     @map("subject_pass_score")
+  semesterPassScore Float     @map("semester_pass_score")
+  effectiveFrom     DateTime  @map("effective_from")
+  effectiveTo       DateTime? @map("effective_to")
 
-  schoolYear          SchoolYear @relation(fields: [schoolYearId], references: [id])
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id])
 
   @@map("system_parameters")
 }
 
 model AuditLog {
-  id            Int       @id @default(autoincrement())
-  userId        Int?      @map("user_id")
-  action        String
-  entityType    String    @map("entity_type")
-  entityId      Int?      @map("entity_id")
-  oldValue      String?   @db.Text @map("old_value")
-  newValue      String?   @db.Text @map("new_value")
-  ipAddress     String?   @map("ip_address")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   Int?     @map("entity_id")
+  oldValue   String?  @map("old_value") @db.Text
+  newValue   String?  @map("new_value") @db.Text
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  user          User?     @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
 }
