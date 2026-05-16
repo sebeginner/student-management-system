@@ -1,27 +1,45 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { AuthenticatedUser } from './types';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @ApiOperation({ summary: 'Đăng nhập hệ thống' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        username: { type: 'string', example: 'admin' },
-        password: { type: 'string', example: 'admin123' },
-      },
-      required: ['username', 'password'],
-    },
-  })
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  signIn(@Body() signInDto: Record<string, any>) {
-    // Gọi hàm login từ Service
-    return this.authService.login(signInDto.username, signInDto.password);
+  login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto.username, loginDto.password);
+  }
+
+  @ApiOperation({ summary: 'Đăng xuất hệ thống' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('logout')
+  logout() {
+    return this.authService.logout();
+  }
+
+  @ApiOperation({ summary: 'Lấy thông tin người dùng hiện tại' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.getProfile(user);
   }
 }
