@@ -31,6 +31,8 @@ type SeedStudent = {
   fullName: string;
   gender: string;
   dateOfBirth: string;
+  status?: string;
+  classCode?: string;
 };
 
 type ScoreInput = {
@@ -171,6 +173,12 @@ async function main() {
     create: { name: '10', level: 10, isActive: true },
   });
 
+  const grade11 = await prisma.gradeLevel.upsert({
+    where: { level: 11 },
+    update: { name: '11', isActive: true },
+    create: { name: '11', level: 11, isActive: true },
+  });
+
   const math = await prisma.subject.upsert({
     where: { subjectCode: 'MATH' },
     update: { name: 'Toan', coefficient: 1, description: 'Mon Toan', isActive: true },
@@ -252,6 +260,50 @@ async function main() {
       gradeLevelId: grade10.id,
       schoolYearId: schoolYear.id,
       homeroomTeacherId: teacher01.id,
+    },
+  });
+
+  const class10A2 = await prisma.class.upsert({
+    where: { classCode: '10A2' },
+    update: {
+      name: '10A2',
+      maxSize: 40,
+      status: 'ACTIVE',
+      gradeLevelId: grade10.id,
+      schoolYearId: schoolYear.id,
+      homeroomTeacherId: null,
+    },
+    create: {
+      classCode: '10A2',
+      name: '10A2',
+      maxSize: 40,
+      currentSize: 0,
+      status: 'ACTIVE',
+      gradeLevelId: grade10.id,
+      schoolYearId: schoolYear.id,
+      homeroomTeacherId: null,
+    },
+  });
+
+  const class11A1 = await prisma.class.upsert({
+    where: { classCode: '11A1' },
+    update: {
+      name: '11A1',
+      maxSize: 40,
+      status: 'ACTIVE',
+      gradeLevelId: grade11.id,
+      schoolYearId: schoolYear.id,
+      homeroomTeacherId: null,
+    },
+    create: {
+      classCode: '11A1',
+      name: '11A1',
+      maxSize: 40,
+      currentSize: 0,
+      status: 'ACTIVE',
+      gradeLevelId: grade11.id,
+      schoolYearId: schoolYear.id,
+      homeroomTeacherId: null,
     },
   });
 
@@ -376,43 +428,72 @@ async function main() {
       code: 'S001',
       username: 'student01',
       email: 'student01@school.com',
-      fullName: 'Student 01',
+      fullName: 'Nguyen Van An',
       gender: 'MALE',
       dateOfBirth: '2008-02-01',
+      classCode: '10A1',
     },
     {
       code: 'S002',
       username: 'student02',
       email: 'student02@school.com',
-      fullName: 'Student 02',
+      fullName: 'Tran Thi Binh',
       gender: 'FEMALE',
       dateOfBirth: '2008-06-12',
+      classCode: '10A1',
     },
     {
       code: 'S003',
       username: 'student03',
       email: 'student03@school.com',
-      fullName: 'Student 03',
+      fullName: 'Le Minh Chau',
       gender: 'MALE',
       dateOfBirth: '2009-01-20',
+      classCode: '10A1',
     },
     {
       code: 'S004',
       username: 'student04',
       email: 'student04@school.com',
-      fullName: 'Student 04',
+      fullName: 'Pham Thu Dung',
       gender: 'FEMALE',
       dateOfBirth: '2009-04-08',
+      classCode: '10A1',
     },
     {
       code: 'S005',
       username: 'student05',
       email: 'student05@school.com',
-      fullName: 'Student 05',
+      fullName: 'Hoang Gia Huy',
       gender: 'MALE',
       dateOfBirth: '2008-11-15',
+      classCode: '10A1',
+    },
+    {
+      code: 'S006',
+      username: 'student06',
+      email: 'student06@school.com',
+      fullName: 'Do Ngoc Lan',
+      gender: 'FEMALE',
+      dateOfBirth: '2009-03-18',
+      status: 'PENDING_CLASS_ASSIGNMENT',
+    },
+    {
+      code: 'S007',
+      username: 'student07',
+      email: 'student07@school.com',
+      fullName: 'Bui Quoc Minh',
+      gender: 'MALE',
+      dateOfBirth: '2008-09-09',
+      classCode: '10A2',
     },
   ];
+
+  const classByCode = new Map([
+    [class10A1.classCode, class10A1],
+    [class10A2.classCode, class10A2],
+    [class11A1.classCode, class11A1],
+  ]);
 
   const students: Array<{ id: number; studentCode: string }> = [];
   for (const item of seedStudents) {
@@ -425,7 +506,7 @@ async function main() {
         admissionDate: toDate('2025-09-01'),
         address: 'TP.HCM',
         email: item.email,
-        status: 'ACTIVE',
+        status: item.status ?? 'ACTIVE',
       },
       create: {
         studentCode: item.code,
@@ -435,7 +516,7 @@ async function main() {
         admissionDate: toDate('2025-09-01'),
         address: 'TP.HCM',
         email: item.email,
-        status: 'ACTIVE',
+        status: item.status ?? 'ACTIVE',
         note: 'Demo student',
       },
     });
@@ -463,25 +544,52 @@ async function main() {
       },
     });
 
-    const activeEnrollment = await prisma.studentClassEnrollment.findFirst({
+    const targetClass = item.classCode ? classByCode.get(item.classCode) : undefined;
+    const activeEnrollments = await prisma.studentClassEnrollment.findMany({
       where: { studentId: student.id, semesterId: semester1.id, status: 'ACTIVE' },
     });
 
-    if (activeEnrollment) {
+    if (!targetClass) {
+      await Promise.all(
+        activeEnrollments.map((enrollment) =>
+          prisma.studentClassEnrollment.update({
+            where: { id: enrollment.id },
+            data: {
+              status: 'INACTIVE',
+              endedAt: new Date(),
+              reason: 'Seed reset to pending class assignment',
+            },
+          }),
+        ),
+      );
+    } else if (activeEnrollments.length > 0) {
+      const [firstEnrollment, ...extraEnrollments] = activeEnrollments;
       await prisma.studentClassEnrollment.update({
-        where: { id: activeEnrollment.id },
+        where: { id: firstEnrollment.id },
         data: {
-          classId: class10A1.id,
+          classId: targetClass.id,
           status: 'ACTIVE',
           endedAt: null,
           reason: null,
         },
       });
+      await Promise.all(
+        extraEnrollments.map((enrollment) =>
+          prisma.studentClassEnrollment.update({
+            where: { id: enrollment.id },
+            data: {
+              status: 'INACTIVE',
+              endedAt: new Date(),
+              reason: 'Seed cleanup duplicated active enrollment',
+            },
+          }),
+        ),
+      );
     } else {
       await prisma.studentClassEnrollment.create({
         data: {
           studentId: student.id,
-          classId: class10A1.id,
+          classId: targetClass.id,
           semesterId: semester1.id,
           status: 'ACTIVE',
         },
@@ -489,13 +597,15 @@ async function main() {
     }
   }
 
-  const activeStudentCount = await prisma.studentClassEnrollment.count({
-    where: { classId: class10A1.id, semesterId: semester1.id, status: 'ACTIVE' },
-  });
-  await prisma.class.update({
-    where: { id: class10A1.id },
-    data: { currentSize: activeStudentCount },
-  });
+  for (const classItem of [class10A1, class10A2, class11A1]) {
+    const activeStudentCount = await prisma.studentClassEnrollment.count({
+      where: { classId: classItem.id, semesterId: semester1.id, status: 'ACTIVE' },
+    });
+    await prisma.class.update({
+      where: { id: classItem.id },
+      data: { currentSize: activeStudentCount },
+    });
+  }
 
   const testTypes = await Promise.all([
     prisma.testType.upsert({
@@ -696,8 +806,9 @@ async function main() {
   console.log(`- Manager:        username=manager01   password=${seedManagerPassword}`);
   console.log(`- Teacher:        username=teacher01   password=${seedTeacherPassword}`);
   console.log(`- Teacher:        username=teacher02   password=${seedTeacherPassword}`);
-  console.log(`- Students:       username=student01..student05 password=${seedStudentPassword}`);
-  console.log(`- Class:          ${class10A1.name} (${schoolYear.name}, ${semester1.name})`);
+  console.log(`- Students:       username=student01..student07 password=${seedStudentPassword}`);
+  console.log(`- Students:       username=student06 pending assignment, student07 in 10A2`);
+  console.log(`- Classes:        ${class10A1.name}, ${class10A2.name}, ${class11A1.name} (${schoolYear.name}, ${semester1.name})`);
 }
 
 main()
