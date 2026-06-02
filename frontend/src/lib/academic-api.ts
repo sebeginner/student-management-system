@@ -1,4 +1,4 @@
-import { api, getResponseData } from './api';
+﻿import { api, getResponseData } from './api';
 
 export interface ApiSuccess<T> {
   data: T;
@@ -347,9 +347,74 @@ export interface SubjectSummaryReport {
   details: SubjectSummaryReportDetail[];
 }
 
+export interface SystemParameter {
+  id: number;
+  schoolYearId: number;
+  minAge: number;
+  maxAge: number;
+  maxClassSize: number;
+  minScore: number;
+  maxScore: number;
+  subjectPassScore: number;
+  semesterPassScore: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  schoolYear: SchoolYear;
+}
+
+export interface UpdateSystemParameterPayload {
+  minAge?: number;
+  maxAge?: number;
+  maxClassSize?: number;
+  minScore?: number;
+  maxScore?: number;
+  subjectPassScore?: number;
+  semesterPassScore?: number;
+  effectiveFrom?: string;
+  effectiveTo?: string | null;
+}
+
+export interface SystemUser {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  status: string;
+  lastLoginAt: string | null;
+  roleId: number;
+  studentId: number | null;
+  teacherId: number | null;
+  role: { id: number; name: string };
+  student: { id: number; studentCode: string; fullName: string } | null;
+  teacher: { id: number; teacherCode: string; fullName: string } | null;
+}
+
+export interface CreateUserPayload {
+  username: string;
+  email: string;
+  password: string;
+  fullName: string;
+  roleName: string;
+  studentId?: number;
+  teacherId?: number;
+}
+
+export interface UpdateUserPayload {
+  fullName?: string;
+  email?: string;
+  status?: string;
+  roleName?: string;
+  studentId?: number | null;
+  teacherId?: number | null;
+}
+
+export interface ResetPasswordPayload {
+  newPassword: string;
+}
+
 export const academicApi = {
   async getStudents(params?: { keyword?: string; status?: string }) {
-    const response = await api.get<ApiSuccess<Student[]> | Student[]>('/students', {
+    const response = await api.get<ApiSuccess<Student[]>>('/students', {
       params,
     });
 
@@ -357,7 +422,7 @@ export const academicApi = {
   },
 
   async createStudent(payload: StudentPayload) {
-    const response = await api.post<ApiSuccess<Student> | Student>(
+    const response = await api.post<ApiSuccess<Student>>(
       '/students',
       payload,
     );
@@ -366,7 +431,7 @@ export const academicApi = {
   },
 
   async updateStudent(id: number, payload: Partial<StudentPayload>) {
-    const response = await api.patch<ApiSuccess<Student> | Student>(
+    const response = await api.patch<ApiSuccess<Student>>(
       `/students/${id}`,
       payload,
     );
@@ -375,7 +440,7 @@ export const academicApi = {
   },
 
   async getClasses(params?: { keyword?: string }) {
-    const response = await api.get<ApiSuccess<SchoolClass[]> | SchoolClass[]>(
+    const response = await api.get<ApiSuccess<SchoolClass[]>>(
       '/classes',
       { params },
     );
@@ -388,7 +453,7 @@ export const academicApi = {
     subjectId?: number;
     status?: string;
   }) {
-    const response = await api.get<ApiSuccess<Teacher[]> | Teacher[]>(
+    const response = await api.get<ApiSuccess<Teacher[]>>(
       '/teachers',
       { params },
     );
@@ -397,7 +462,7 @@ export const academicApi = {
   },
 
   async createTeacher(payload: TeacherPayload) {
-    const response = await api.post<ApiSuccess<Teacher> | Teacher>(
+    const response = await api.post<ApiSuccess<Teacher>>(
       '/teachers',
       payload,
     );
@@ -406,7 +471,7 @@ export const academicApi = {
   },
 
   async updateTeacher(id: number, payload: Partial<TeacherPayload>) {
-    const response = await api.patch<ApiSuccess<Teacher> | Teacher>(
+    const response = await api.patch<ApiSuccess<Teacher>>(
       `/teachers/${id}`,
       payload,
     );
@@ -415,7 +480,7 @@ export const academicApi = {
   },
 
   async getClass(id: number) {
-    const response = await api.get<ApiSuccess<SchoolClass> | SchoolClass>(
+    const response = await api.get<ApiSuccess<SchoolClass>>(
       `/classes/${id}`,
     );
 
@@ -423,7 +488,7 @@ export const academicApi = {
   },
 
   async createClass(payload: ClassPayload) {
-    const response = await api.post<ApiSuccess<SchoolClass> | SchoolClass>(
+    const response = await api.post<ApiSuccess<SchoolClass>>(
       '/classes',
       payload,
     );
@@ -432,7 +497,7 @@ export const academicApi = {
   },
 
   async updateClass(id: number, payload: Partial<ClassPayload>) {
-    const response = await api.patch<ApiSuccess<SchoolClass> | SchoolClass>(
+    const response = await api.patch<ApiSuccess<SchoolClass>>(
       `/classes/${id}`,
       payload,
     );
@@ -442,14 +507,14 @@ export const academicApi = {
 
   async getClassStudents(id: number) {
     const response = await api.get<
-      ApiSuccess<ClassStudentRow[]> | ClassStudentRow[]
+      ApiSuccess<ClassStudentRow[]>
     >(`/classes/${id}/students`);
 
     return getResponseData(response.data);
   },
 
   async getSchoolYears() {
-    const response = await api.get<ApiSuccess<SchoolYear[]> | SchoolYear[]>(
+    const response = await api.get<ApiSuccess<SchoolYear[]>>(
       '/academic-years',
     );
 
@@ -457,7 +522,7 @@ export const academicApi = {
   },
 
   async getSemesters() {
-    const response = await api.get<ApiSuccess<Semester[]> | Semester[]>(
+    const response = await api.get<ApiSuccess<Semester[]>>(
       '/semesters',
     );
 
@@ -465,7 +530,7 @@ export const academicApi = {
   },
 
   async getGradeLevels() {
-    const response = await api.get<ApiSuccess<GradeLevel[]> | GradeLevel[]>(
+    const response = await api.get<ApiSuccess<GradeLevel[]>>(
       '/grade-levels',
     );
 
@@ -473,7 +538,7 @@ export const academicApi = {
   },
 
   async getSubjects() {
-    const response = await api.get<ApiSuccess<Subject[]> | Subject[]>(
+    const response = await api.get<ApiSuccess<Subject[]>>(
       '/subjects',
     );
 
@@ -490,7 +555,7 @@ export const academicApi = {
     isActive?: boolean;
   }) {
     const response = await api.get<
-      ApiSuccess<TeacherAssignment[]> | TeacherAssignment[]
+      ApiSuccess<TeacherAssignment[]>
     >('/teacher-assignments', { params });
 
     return getResponseData(response.data);
@@ -498,7 +563,7 @@ export const academicApi = {
 
   async getMyTeacherAssignments() {
     const response = await api.get<
-      ApiSuccess<TeacherAssignment[]> | TeacherAssignment[]
+      ApiSuccess<TeacherAssignment[]>
     >('/me/teacher-assignments');
 
     return getResponseData(response.data);
@@ -506,7 +571,7 @@ export const academicApi = {
 
   async createTeacherAssignment(payload: TeacherAssignmentPayload) {
     const response = await api.post<
-      ApiSuccess<TeacherAssignment> | TeacherAssignment
+      ApiSuccess<TeacherAssignment>
     >('/teacher-assignments', payload);
 
     return getResponseData(response.data);
@@ -517,7 +582,7 @@ export const academicApi = {
     payload: Partial<TeacherAssignmentPayload>,
   ) {
     const response = await api.patch<
-      ApiSuccess<TeacherAssignment> | TeacherAssignment
+      ApiSuccess<TeacherAssignment>
     >(`/teacher-assignments/${id}`, payload);
 
     return getResponseData(response.data);
@@ -529,7 +594,7 @@ export const academicApi = {
     semesterId?: number;
     status?: ScoreSheetStatus;
   }) {
-    const response = await api.get<ApiSuccess<ScoreSheet[]> | ScoreSheet[]>(
+    const response = await api.get<ApiSuccess<ScoreSheet[]>>(
       '/scores/sheets',
       { params },
     );
@@ -538,7 +603,7 @@ export const academicApi = {
   },
 
   async getScoreSheet(id: number) {
-    const response = await api.get<ApiSuccess<ScoreSheet> | ScoreSheet>(
+    const response = await api.get<ApiSuccess<ScoreSheet>>(
       `/scores/sheets/${id}`,
     );
 
@@ -551,14 +616,14 @@ export const academicApi = {
     payload: UpdateStudentScorePayload,
   ) {
     const response = await api.put<
-      ApiSuccess<StudentSubjectScore> | StudentSubjectScore
+      ApiSuccess<StudentSubjectScore>
     >(`/scores/sheets/${scoreSheetId}/students/${studentId}`, payload);
 
     return getResponseData(response.data);
   },
 
   async submitScoreSheet(id: number) {
-    const response = await api.post<ApiSuccess<ScoreSheet> | ScoreSheet>(
+    const response = await api.post<ApiSuccess<ScoreSheet>>(
       `/scores/sheets/${id}/submit`,
     );
 
@@ -566,7 +631,7 @@ export const academicApi = {
   },
 
   async lockScoreSheet(id: number) {
-    const response = await api.post<ApiSuccess<ScoreSheet> | ScoreSheet>(
+    const response = await api.post<ApiSuccess<ScoreSheet>>(
       `/scores/sheets/${id}/lock`,
     );
 
@@ -578,7 +643,7 @@ export const academicApi = {
     scoreSheetId?: number;
   }) {
     const response = await api.get<
-      ApiSuccess<ScoreChangeRequest[]> | ScoreChangeRequest[]
+      ApiSuccess<ScoreChangeRequest[]>
     >('/score-change-requests', { params });
 
     return getResponseData(response.data);
@@ -586,7 +651,7 @@ export const academicApi = {
 
   async createScoreChangeRequest(payload: CreateScoreChangeRequestPayload) {
     const response = await api.post<
-      ApiSuccess<ScoreChangeRequest> | ScoreChangeRequest
+      ApiSuccess<ScoreChangeRequest>
     >('/score-change-requests', payload);
 
     return getResponseData(response.data);
@@ -597,7 +662,7 @@ export const academicApi = {
     payload: ReviewScoreChangeRequestPayload,
   ) {
     const response = await api.post<
-      ApiSuccess<ScoreChangeRequest> | ScoreChangeRequest
+      ApiSuccess<ScoreChangeRequest>
     >(`/score-change-requests/${id}/approve`, payload);
 
     return getResponseData(response.data);
@@ -608,14 +673,14 @@ export const academicApi = {
     payload: ReviewScoreChangeRequestPayload,
   ) {
     const response = await api.post<
-      ApiSuccess<ScoreChangeRequest> | ScoreChangeRequest
+      ApiSuccess<ScoreChangeRequest>
     >(`/score-change-requests/${id}/reject`, payload);
 
     return getResponseData(response.data);
   },
 
   async getMyScores() {
-    const response = await api.get<ApiSuccess<MyStudentScore[]> | MyStudentScore[]>(
+    const response = await api.get<ApiSuccess<MyStudentScore[]>>(
       '/scores/my-scores',
     );
 
@@ -628,7 +693,7 @@ export const academicApi = {
     includeUnOfficial?: boolean;
   }) {
     const response = await api.get<
-      ApiSuccess<DashboardSummaryReport> | DashboardSummaryReport
+      ApiSuccess<DashboardSummaryReport>
     >('/reports/dashboard-summary', { params });
 
     return getResponseData(response.data);
@@ -640,7 +705,7 @@ export const academicApi = {
     includeUnOfficial?: boolean;
   }) {
     const response = await api.get<
-      ApiSuccess<ClassSemesterReport> | ClassSemesterReport
+      ApiSuccess<ClassSemesterReport>
     >('/reports/class-semester', { params });
 
     return getResponseData(response.data);
@@ -653,14 +718,22 @@ export const academicApi = {
     includeUnOfficial?: boolean;
   }) {
     const response = await api.get<
-      ApiSuccess<SubjectSummaryReport> | SubjectSummaryReport
+      ApiSuccess<SubjectSummaryReport>
     >('/reports/subject-summary', { params });
 
     return getResponseData(response.data);
   },
 
+  async getStudent(id: number) {
+    const response = await api.get<ApiSuccess<Student>>(
+      `/students/${id}`,
+    );
+
+    return getResponseData(response.data);
+  },
+
   async assignEnrollment(payload: AssignEnrollmentPayload) {
-    const response = await api.post<ApiSuccess<Enrollment> | Enrollment>(
+    const response = await api.post<ApiSuccess<Enrollment>>(
       '/enrollments/assign',
       payload,
     );
@@ -669,11 +742,51 @@ export const academicApi = {
   },
 
   async transferEnrollment(payload: TransferEnrollmentPayload) {
-    const response = await api.post<ApiSuccess<Enrollment> | Enrollment>(
+    const response = await api.post<ApiSuccess<Enrollment>>(
       '/enrollments/transfer',
       payload,
     );
 
+    return getResponseData(response.data);
+  },
+
+  async getSystemParameters() {
+    const response = await api.get<
+      ApiSuccess<SystemParameter[]>
+    >('/system-parameters');
+
+    return getResponseData(response.data);
+  },
+
+  async updateSystemParameter(id: number, payload: UpdateSystemParameterPayload) {
+    const response = await api.patch<ApiSuccess<SystemParameter>>(
+      `/system-parameters/${id}`,
+      payload,
+    );
+
+    return getResponseData(response.data);
+  },
+
+  async getUsers(params?: { keyword?: string; roleName?: string; status?: string }) {
+    const response = await api.get<ApiSuccess<SystemUser[]>>('/users', { params });
+    return getResponseData(response.data);
+  },
+
+  async createUser(payload: CreateUserPayload) {
+    const response = await api.post<ApiSuccess<SystemUser>>('/users', payload);
+    return getResponseData(response.data);
+  },
+
+  async updateUser(id: number, payload: UpdateUserPayload) {
+    const response = await api.patch<ApiSuccess<SystemUser>>(`/users/${id}`, payload);
+    return getResponseData(response.data);
+  },
+
+  async resetUserPassword(id: number, payload: ResetPasswordPayload) {
+    const response = await api.post<ApiSuccess<SystemUser>>(
+      `/users/${id}/reset-password`,
+      payload,
+    );
     return getResponseData(response.data);
   },
 };

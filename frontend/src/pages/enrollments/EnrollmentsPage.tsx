@@ -8,17 +8,18 @@ import {
 import { getApiErrorKey, getApiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../lib/auth-store';
 import { useToastStore } from '../../lib/toast-store';
+import { menuLabels } from '../../lib/uiText';
 
 const assignmentErrorMessages: Record<string, string> = {
-  CLASS_FULL: 'Lop da du si so. Vui long chon lop khac.',
-  STUDENT_ALREADY_ENROLLED: 'Hoc sinh da co lop active trong hoc ky nay.',
+  CLASS_FULL: 'Lớp đã đủ sĩ số. Vui lòng chọn lớp khác.',
+  STUDENT_ALREADY_ENROLLED: 'Học sinh đã có lớp đang hiệu lực trong học kỳ này.',
 };
 
 const transferErrorMessages: Record<string, string> = {
-  CLASS_FULL: 'Lop dich da du si so. Vui long chon lop khac.',
-  STUDENT_ALREADY_ENROLLED: 'Hoc sinh dang hoc trong lop nay.',
-  INVALID_TRANSFER_DIFFERENT_GRADE: 'Chi duoc chuyen lop trong cung khoi.',
-  ENROLLMENT_NOT_FOUND: 'Khong tim thay lop active cua hoc sinh trong hoc ky nay.',
+  CLASS_FULL: 'Lớp đích đã đủ sĩ số. Vui lòng chọn lớp khác.',
+  STUDENT_ALREADY_ENROLLED: 'Học sinh đang học trong lớp này.',
+  INVALID_TRANSFER_DIFFERENT_GRADE: 'Chỉ được chuyển lớp trong cùng khối.',
+  ENROLLMENT_NOT_FOUND: 'Không tìm thấy lớp đang hiệu lực của học sinh trong học kỳ này.',
 };
 
 const activeEnrollmentForSemester = (student: Student, semesterId: number) =>
@@ -27,7 +28,11 @@ const activeEnrollmentForSemester = (student: Student, semesterId: number) =>
       enrollment.status === 'ACTIVE' && enrollment.semesterId === semesterId,
   );
 
-export const EnrollmentsPage = () => {
+interface EnrollmentsPageProps {
+  mode?: 'assign' | 'transfer';
+}
+
+export const EnrollmentsPage = ({ mode = 'assign' }: EnrollmentsPageProps) => {
   const user = useAuthStore((state) => state.user);
   const showToast = useToastStore((state) => state.showToast);
   const canManage = user?.role === 'ACADEMIC_STAFF';
@@ -123,7 +128,7 @@ export const EnrollmentsPage = () => {
         reason: assignReason.trim() || undefined,
       });
 
-      showToast('Student assigned successfully.', 'success');
+      showToast('Phân lớp học sinh thành công.', 'success');
       setAssignStudentId('');
       setAssignClassId('');
       setAssignReason('');
@@ -152,7 +157,7 @@ export const EnrollmentsPage = () => {
         reason: transferReason.trim() || undefined,
       });
 
-      showToast('Student transferred successfully.', 'success');
+      showToast('Chuyển lớp học sinh thành công.', 'success');
       setTransferStudentId('');
       setTransferClassId('');
       setTransferReason('');
@@ -168,13 +173,19 @@ export const EnrollmentsPage = () => {
     }
   };
 
+  const pageTitle = mode === 'transfer' ? menuLabels.transfer : menuLabels.enrollments;
+  const pageDescription =
+    mode === 'transfer'
+      ? 'Chuyển học sinh đang học sang lớp khác trong cùng khối.'
+      : 'Phân học sinh chưa có lớp vào lớp học trong học kỳ.';
+
   if (!canManage) {
     return (
       <section className="space-y-3">
-        <h2 className="text-2xl font-semibold text-slate-900">Enrollments</h2>
+        <h2 className="text-2xl font-semibold text-slate-900">{pageTitle}</h2>
         <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          You can view academic data, but class assignment and transfer actions
-          are reserved for academic staff.
+          Bạn có thể xem dữ liệu học vụ, nhưng thao tác phân lớp và chuyển lớp
+          chỉ dành cho Giáo vụ.
         </div>
       </section>
     );
@@ -183,15 +194,13 @@ export const EnrollmentsPage = () => {
   return (
     <section className="space-y-5">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Enrollments</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Assign students to classes and transfer active students between classes.
-        </p>
+        <h2 className="text-2xl font-semibold text-slate-900">{pageTitle}</h2>
+        <p className="mt-1 text-sm text-slate-600">{pageDescription}</p>
       </div>
 
       <div className="rounded border border-slate-200 bg-white p-4">
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Semester</span>
+          <span>Học kỳ</span>
           <select
             value={semesterId}
             onChange={(event) => {
@@ -213,31 +222,24 @@ export const EnrollmentsPage = () => {
 
       {isLoading ? (
         <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-500">
-          Loading enrollment data...
+          Đang tải dữ liệu phân lớp...
         </div>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      {mode === 'assign' ? (
         <form
           onSubmit={handleAssign}
-          className="space-y-4 rounded border border-slate-200 bg-white p-5"
+          className="max-w-xl space-y-4 rounded border border-slate-200 bg-white p-5"
         >
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Assign class</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Choose a student without active class in the selected semester.
-            </p>
-          </div>
-
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Student</span>
+            <span>Học sinh chưa có lớp</span>
             <select
               required
               value={assignStudentId}
               onChange={(event) => setAssignStudentId(event.target.value)}
               className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
             >
-              <option value="">Select student</option>
+              <option value="">Chọn học sinh</option>
               {unassignedStudents.map((student) => (
                 <option key={student.id} value={student.id}>
                   {student.studentCode} - {student.fullName}
@@ -247,14 +249,14 @@ export const EnrollmentsPage = () => {
           </label>
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Class</span>
+            <span>Lớp</span>
             <select
               required
               value={assignClassId}
               onChange={(event) => setAssignClassId(event.target.value)}
               className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
             >
-              <option value="">Select class</option>
+              <option value="">Chọn lớp</option>
               {classes.map((classItem) => (
                 <option key={classItem.id} value={classItem.id}>
                   {classItem.name} - {classItem.currentSize}/{classItem.maxSize}
@@ -264,7 +266,7 @@ export const EnrollmentsPage = () => {
           </label>
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Reason</span>
+            <span>Lý do</span>
             <textarea
               value={assignReason}
               onChange={(event) => setAssignReason(event.target.value)}
@@ -277,23 +279,16 @@ export const EnrollmentsPage = () => {
             disabled={isSubmitting}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
           >
-            Assign student
+            Phân lớp học sinh
           </button>
         </form>
-
+      ) : (
         <form
           onSubmit={handleTransfer}
-          className="space-y-4 rounded border border-slate-200 bg-white p-5"
+          className="max-w-xl space-y-4 rounded border border-slate-200 bg-white p-5"
         >
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Transfer class</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Select an active student and a target class in the same grade.
-            </p>
-          </div>
-
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Student</span>
+            <span>Học sinh đang học</span>
             <select
               required
               value={transferStudentId}
@@ -303,7 +298,7 @@ export const EnrollmentsPage = () => {
               }}
               className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
             >
-              <option value="">Select student</option>
+              <option value="">Chọn học sinh</option>
               {assignedStudents.map((student) => {
                 const activeEnrollment = activeEnrollmentForSemester(
                   student,
@@ -313,7 +308,7 @@ export const EnrollmentsPage = () => {
                 return (
                   <option key={student.id} value={student.id}>
                     {student.studentCode} - {student.fullName} -{' '}
-                    {activeEnrollment?.class?.name ?? 'Current class'}
+                    {activeEnrollment?.class?.name ?? 'Lớp hiện tại'}
                   </option>
                 );
               })}
@@ -321,11 +316,11 @@ export const EnrollmentsPage = () => {
           </label>
 
           <div className="rounded bg-slate-50 p-3 text-sm text-slate-600">
-            Current class: {currentClass?.name ?? '-'}
+            Lớp hiện tại: <span className="font-medium">{currentClass?.name ?? '-'}</span>
           </div>
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Target class</span>
+            <span>Lớp đích (cùng khối)</span>
             <select
               required
               value={transferClassId}
@@ -333,7 +328,7 @@ export const EnrollmentsPage = () => {
               className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
               disabled={!currentClass}
             >
-              <option value="">Select target class</option>
+              <option value="">Chọn lớp đích</option>
               {targetClasses.map((classItem) => (
                 <option key={classItem.id} value={classItem.id}>
                   {classItem.name} - {classItem.currentSize}/{classItem.maxSize}
@@ -343,7 +338,7 @@ export const EnrollmentsPage = () => {
           </label>
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Reason</span>
+            <span>Lý do chuyển lớp *</span>
             <textarea
               required
               value={transferReason}
@@ -357,10 +352,10 @@ export const EnrollmentsPage = () => {
             disabled={isSubmitting || !currentClass}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
           >
-            Transfer student
+            Chuyển lớp học sinh
           </button>
         </form>
-      </div>
+      )}
     </section>
   );
 };

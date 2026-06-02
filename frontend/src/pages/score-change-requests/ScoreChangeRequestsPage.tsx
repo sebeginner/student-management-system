@@ -7,7 +7,9 @@ import {
 import { getApiErrorKey, getApiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../lib/auth-store';
 import { formatDisplayDate } from '../../lib/date';
+import { getStatusLabel } from '../../lib/statusLabels';
 import { useToastStore } from '../../lib/toast-store';
+import { commonLabels, menuLabels } from '../../lib/uiText';
 import { scoreErrorMessages } from '../scores/score-utils';
 
 type ReviewAction = 'APPROVE' | 'REJECT';
@@ -88,12 +90,12 @@ export const ScoreChangeRequestsPage = () => {
         await academicApi.approveScoreChangeRequest(reviewTarget.id, {
           reviewNote: reviewNote.trim() || undefined,
         });
-        showToast('Score change request approved.', 'success');
+        showToast('Đã duyệt yêu cầu sửa điểm.', 'success');
       } else {
         await academicApi.rejectScoreChangeRequest(reviewTarget.id, {
           rejectReason: reviewNote.trim() || undefined,
         });
-        showToast('Score change request rejected.', 'success');
+        showToast('Đã từ chối yêu cầu sửa điểm.', 'success');
       }
 
       setReviewTarget(null);
@@ -111,17 +113,17 @@ export const ScoreChangeRequestsPage = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">
-            Score Change Requests
+            {menuLabels.scoreChangeRequests}
           </h2>
           <p className="mt-1 text-sm text-slate-600">
             {canReview
-              ? 'Review score correction requests after score sheets are locked.'
-              : 'View the score correction requests you submitted.'}
+              ? 'Duyệt các yêu cầu sửa điểm sau khi bảng điểm đã khóa.'
+              : 'Xem các yêu cầu sửa điểm bạn đã gửi.'}
           </p>
         </div>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Status</span>
+          <span>{commonLabels.status}</span>
           <select
             value={status}
             onChange={(event) =>
@@ -131,7 +133,7 @@ export const ScoreChangeRequestsPage = () => {
           >
             {statusOptions.map((option) => (
               <option key={option || 'ALL'} value={option}>
-                {option || 'All'}
+                {option ? getStatusLabel(option) : 'Tất cả'}
               </option>
             ))}
           </select>
@@ -142,23 +144,23 @@ export const ScoreChangeRequestsPage = () => {
         <table className="min-w-[1080px] divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Sheet</th>
-              <th className="px-4 py-3">Score field</th>
-              <th className="px-4 py-3">Old</th>
-              <th className="px-4 py-3">New</th>
-              <th className="px-4 py-3">Reason</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Requested by</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">Học sinh</th>
+              <th className="px-4 py-3">Bảng điểm</th>
+              <th className="px-4 py-3">Cột điểm</th>
+              <th className="px-4 py-3">Điểm cũ</th>
+              <th className="px-4 py-3">Điểm mới</th>
+              <th className="px-4 py-3">Lý do</th>
+              <th className="px-4 py-3">{commonLabels.status}</th>
+              <th className="px-4 py-3">Người yêu cầu</th>
+              <th className="px-4 py-3">Ngày tạo</th>
+              <th className="px-4 py-3 text-right">{commonLabels.actions}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
-                  Loading score change requests...
+                  Đang tải yêu cầu sửa điểm...
                 </td>
               </tr>
             ) : null}
@@ -166,7 +168,7 @@ export const ScoreChangeRequestsPage = () => {
             {!isLoading && requests.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
-                  No score change requests found.
+                  Chưa có yêu cầu sửa điểm phù hợp.
                 </td>
               </tr>
             ) : null}
@@ -199,7 +201,7 @@ export const ScoreChangeRequestsPage = () => {
                           statusClasses[request.status]
                         }`}
                       >
-                        {request.status}
+                        {getStatusLabel(request.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -218,14 +220,14 @@ export const ScoreChangeRequestsPage = () => {
                             onClick={() => openReview(request, 'APPROVE')}
                             className="rounded border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700"
                           >
-                            Approve
+                            Duyệt
                           </button>
                           <button
                             type="button"
                             onClick={() => openReview(request, 'REJECT')}
                             className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700"
                           >
-                            Reject
+                            Từ chối
                           </button>
                         </div>
                       ) : (
@@ -245,8 +247,8 @@ export const ScoreChangeRequestsPage = () => {
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-slate-900">
                 {reviewAction === 'APPROVE'
-                  ? 'Approve request'
-                  : 'Reject request'}
+                  ? 'Duyệt yêu cầu'
+                  : 'Từ chối yêu cầu'}
               </h3>
               <p className="mt-1 text-sm text-slate-600">
                 {reviewTarget.scoreSheet.class.name} -{' '}
@@ -258,7 +260,7 @@ export const ScoreChangeRequestsPage = () => {
             <form onSubmit={handleReview} className="space-y-4">
               <label className="block space-y-1 text-sm font-medium text-slate-700">
                 <span>
-                  {reviewAction === 'APPROVE' ? 'Review note' : 'Reject reason'}
+                  {reviewAction === 'APPROVE' ? 'Ghi chú duyệt' : 'Lý do từ chối'}
                 </span>
                 <textarea
                   value={reviewNote}
@@ -273,14 +275,14 @@ export const ScoreChangeRequestsPage = () => {
                   onClick={() => setReviewTarget(null)}
                   className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
                 >
-                  Cancel
+                  {commonLabels.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isReviewing}
                   className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
                 >
-                  {isReviewing ? 'Saving...' : 'Confirm'}
+                  {isReviewing ? commonLabels.saving : 'Xác nhận'}
                 </button>
               </div>
             </form>

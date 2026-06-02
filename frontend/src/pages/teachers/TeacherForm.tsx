@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { Subject, Teacher, TeacherPayload } from '../../lib/academic-api';
+import { getStatusLabel } from '../../lib/statusLabels';
+import { commonLabels } from '../../lib/uiText';
 
 interface TeacherFormProps {
   isSaving: boolean;
@@ -49,7 +51,7 @@ export const TeacherForm = ({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Teacher code</span>
+          <span>Mã giáo viên</span>
           <input
             required
             value={teacherCode}
@@ -59,7 +61,7 @@ export const TeacherForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Full name</span>
+          <span>Họ và tên</span>
           <input
             required
             value={fullName}
@@ -69,7 +71,7 @@ export const TeacherForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Main subject</span>
+          <span>Môn phụ trách</span>
           <select
             required
             value={subjectId}
@@ -85,7 +87,7 @@ export const TeacherForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Status</span>
+          <span>{commonLabels.status}</span>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
@@ -93,14 +95,14 @@ export const TeacherForm = ({
           >
             {statusOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {getStatusLabel(option)}
               </option>
             ))}
           </select>
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Email</span>
+          <span>Thư điện tử</span>
           <input
             type="email"
             value={email}
@@ -110,7 +112,7 @@ export const TeacherForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Phone</span>
+          <span>Số điện thoại</span>
           <input
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
@@ -125,14 +127,14 @@ export const TeacherForm = ({
           onClick={onCancel}
           className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
         >
-          Cancel
+          {commonLabels.cancel}
         </button>
         <button
           type="submit"
           disabled={isSaving}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
         >
-          {isSaving ? 'Saving...' : 'Save'}
+          {isSaving ? commonLabels.saving : commonLabels.save}
         </button>
       </div>
     </form>

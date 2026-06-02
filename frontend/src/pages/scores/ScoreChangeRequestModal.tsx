@@ -6,6 +6,7 @@ import {
 } from '../../lib/academic-api';
 import { getApiErrorKey, getApiErrorMessage } from '../../lib/api';
 import { useToastStore } from '../../lib/toast-store';
+import { commonLabels } from '../../lib/uiText';
 import {
   assessmentColumns,
   scoreDetailKey,
@@ -67,7 +68,7 @@ export const ScoreChangeRequestModal = ({
     event.preventDefault();
 
     if (!selectedColumn || oldValue === undefined) {
-      showToast('Khong tim thay diem thanh phan can sua.', 'error');
+      showToast('Không tìm thấy điểm thành phần cần sửa.', 'error');
       return;
     }
 
@@ -85,7 +86,7 @@ export const ScoreChangeRequestModal = ({
         reason: reason.trim(),
       });
 
-      showToast('Score change request created successfully.', 'success');
+      showToast('Tạo yêu cầu sửa điểm thành công.', 'success');
       await onCreated();
       onClose();
     } catch (error) {
@@ -100,7 +101,7 @@ export const ScoreChangeRequestModal = ({
       <div className="w-full max-w-lg rounded bg-white p-6 shadow-lg">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-slate-900">
-            Yeu cau sua diem
+            Yêu cầu sửa điểm
           </h3>
           <p className="mt-1 text-sm text-slate-600">
             {studentScore.student.studentCode} - {studentScore.student.fullName}
@@ -109,7 +110,7 @@ export const ScoreChangeRequestModal = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Score field</span>
+            <span>Cột điểm</span>
             <select
               required
               value={selectedKey}
@@ -131,7 +132,7 @@ export const ScoreChangeRequestModal = ({
           </label>
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Old value</span>
+            <span>Điểm cũ</span>
             <input
               readOnly
               value={oldValue ?? ''}
@@ -140,7 +141,7 @@ export const ScoreChangeRequestModal = ({
           </label>
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>New value</span>
+            <span>Điểm mới</span>
             <input
               required
               type="number"
@@ -154,7 +155,7 @@ export const ScoreChangeRequestModal = ({
           </label>
 
           <label className="block space-y-1 text-sm font-medium text-slate-700">
-            <span>Reason</span>
+            <span>Lý do</span>
             <textarea
               required
               value={reason}
@@ -169,14 +170,14 @@ export const ScoreChangeRequestModal = ({
               onClick={onClose}
               className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
             >
-              Cancel
+              {commonLabels.cancel}
             </button>
             <button
               type="submit"
               disabled={isSubmitting || editableColumns.length === 0}
               className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
             >
-              {isSubmitting ? 'Sending...' : 'Send request'}
+              {isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
             </button>
           </div>
         </form>

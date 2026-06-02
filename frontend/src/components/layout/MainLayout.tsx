@@ -1,7 +1,16 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, School2 } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../lib/auth-store';
+import { useAuthStore, type UserRole } from '../../lib/auth-store';
+import { appText } from '../../lib/uiText';
 import { getMenuItemsByRole, roleLabels } from './menu';
+
+const roleBadgeClasses: Record<UserRole, string> = {
+  ADMIN: 'border-violet-200 bg-violet-50 text-violet-700',
+  ACADEMIC_STAFF: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  MANAGER: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+  TEACHER: 'border-sky-200 bg-sky-50 text-sky-700',
+  STUDENT: 'border-amber-200 bg-amber-50 text-amber-700',
+};
 
 export const MainLayout = () => {
   const navigate = useNavigate();
@@ -14,56 +23,104 @@ export const MainLayout = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-50">
-      <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
-        <div className="flex h-16 items-center border-b border-slate-200 px-5">
-          <h1 className="text-lg font-bold text-blue-700">QL Hoc Sinh</h1>
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
+      <aside className="hidden w-64 shrink-0 flex-col bg-emerald-900 text-white shadow-xl md:flex xl:w-72">
+        <div className="flex min-h-24 items-center gap-3 border-b border-white/10 px-5">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-white/15">
+            <School2 size={24} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold leading-tight">
+              {appText.appName}
+            </h1>
+            <p className="mt-1 text-sm font-medium text-emerald-100">
+              {appText.appSubtitle}
+            </p>
+          </div>
         </div>
-        <nav className="flex-1 space-y-1 p-4">
+
+        <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-5">
           {menuItems.map((item) => (
             <NavLink
-              key={item.to}
+              key={`${item.to}-${item.label}`}
               to={item.to}
               className={({ isActive }) =>
                 [
-                  'block rounded px-3 py-2 text-sm font-medium transition',
+                  'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold transition',
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-slate-700 hover:bg-slate-100',
+                    ? 'bg-white text-emerald-900 shadow-sm'
+                    : 'text-emerald-50/90 hover:bg-white/10 hover:text-white',
                 ].join(' ')
               }
             >
-              {item.label}
+              <item.icon size={19} strokeWidth={2.2} className="shrink-0" />
+              <span className="min-w-0">{item.label}</span>
             </NavLink>
           ))}
         </nav>
+
+        <div className="border-t border-white/10 p-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold text-emerald-50/90 transition hover:bg-white/10 hover:text-white"
+          >
+            <LogOut size={19} />
+            {appText.logout}
+          </button>
+        </div>
       </aside>
 
-      <main className="flex flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
-          <div className="text-sm text-slate-500">
-            {user ? roleLabels[user.role] : ''}
+      <main className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <span>{appText.appSubtitle}</span>
+              <span className="h-1 w-1 rounded-full bg-slate-300" />
+              <span>{appText.appName}</span>
+            </div>
+            <div className="mt-1 truncate text-base font-semibold text-slate-900 md:text-lg">
+              {user
+                ? `Xin chào, ${user.fullName ?? user.username}`
+                : appText.appName}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
+
+          <div className="flex shrink-0 items-center gap-3">
+            {user ? (
+              <span
+                className={`hidden rounded-full border px-3 py-1 text-xs font-bold sm:inline-flex ${
+                  roleBadgeClasses[user.role]
+                }`}
+              >
+                {roleLabels[user.role]}
+              </span>
+            ) : null}
+
+            <div className="hidden text-right md:block">
               <div className="text-sm font-semibold text-slate-800">
                 {user?.fullName ?? user?.username}
               </div>
               <div className="text-xs text-slate-500">{user?.username}</div>
             </div>
+
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 transition hover:bg-slate-100"
-              title="Dang xuat"
-              aria-label="Dang xuat"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              title={appText.logout}
+              aria-label={appText.logout}
             >
               <LogOut size={16} />
+              <span className="hidden sm:inline">{appText.logout}</span>
             </button>
           </div>
         </header>
-        <div className="flex-1 overflow-auto p-6">
-          <Outlet />
+
+        <div className="flex-1 overflow-auto bg-slate-50 p-4 md:p-6 xl:p-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>

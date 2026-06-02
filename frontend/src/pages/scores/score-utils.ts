@@ -6,30 +6,35 @@ import type {
 import type { AuthUser } from '../../lib/auth-store';
 
 export const scoreErrorMessages: Record<string, string> = {
-  SCORE_INVALID_RANGE: 'Diem phai nam trong khoang cho phep.',
-  SCORE_SHEET_LOCKED: 'Bang diem da khoa, khong the sua truc tiep.',
-  NOT_SUBJECT_TEACHER: 'Ban khong phai GVBM cua lop/mon/hoc ky nay.',
-  STUDENT_NOT_IN_CLASS: 'Hoc sinh khong thuoc lop trong hoc ky nay.',
+  SCORE_INVALID_RANGE: 'Điểm phải nằm trong khoảng cho phép.',
+  SCORE_SHEET_LOCKED: 'Bảng điểm đã khóa, không thể sửa trực tiếp.',
+  NOT_SUBJECT_TEACHER: 'Bạn không phải GVBM của lớp/môn/học kỳ này.',
+  STUDENT_NOT_IN_CLASS: 'Học sinh không thuộc lớp trong học kỳ này.',
   SCORE_SHEET_SUBMIT_MISSING_REQUIRED_SCORES:
-    'Bang diem con thieu diem giua ky hoac cuoi ky.',
-  SCORE_SHEET_NOT_SUBMITTED: 'Chi duoc khoa bang diem da submit.',
+    'Bảng điểm còn thiếu điểm giữa kỳ hoặc cuối kỳ.',
+  SCORE_SHEET_NOT_SUBMITTED: 'Chỉ được khóa bảng điểm đã nộp.',
   SCORE_CHANGE_REQUEST_DUPLICATED:
-    'Da co yeu cau sua diem dang cho xu ly cho cot diem nay.',
-  SCORE_CHANGE_REQUEST_ALREADY_PROCESSED: 'Yeu cau sua diem da duoc xu ly.',
+    'Đã có yêu cầu sửa điểm đang chờ xử lý cho cột điểm này.',
+  SCORE_CHANGE_REQUEST_ALREADY_PROCESSED: 'Yêu cầu sửa điểm đã được xử lý.',
   ONLY_ACADEMIC_STAFF_CAN_APPROVE:
-    'Chi giao vu duoc duyet yeu cau sua diem.',
+    'Chỉ giáo vụ được duyệt yêu cầu sửa điểm.',
 };
 
 export const assessmentColumns = [
-  { key: 'oral', label: 'Oral/15m', testTypeCode: 'ORAL_15M', attemptNo: 1 },
+  {
+    key: 'oral',
+    label: 'Miệng / 15 phút',
+    testTypeCode: 'ORAL_15M',
+    attemptNo: 1,
+  },
   {
     key: 'onePeriod',
-    label: 'One period',
+    label: 'Một tiết',
     testTypeCode: 'ONE_PERIOD',
     attemptNo: 1,
   },
-  { key: 'midterm', label: 'Midterm', testTypeCode: 'MIDTERM', attemptNo: 1 },
-  { key: 'final', label: 'Final', testTypeCode: 'FINAL', attemptNo: 1 },
+  { key: 'midterm', label: 'Giữa kỳ', testTypeCode: 'MIDTERM', attemptNo: 1 },
+  { key: 'final', label: 'Cuối kỳ', testTypeCode: 'FINAL', attemptNo: 1 },
 ];
 
 export const isSubjectTeacherForSheet = (
@@ -43,6 +48,17 @@ export const isSubjectTeacherForSheet = (
       assignment.classId === sheet.classId &&
       assignment.subjectId === sheet.subjectId &&
       assignment.semesterId === sheet.semesterId,
+  );
+
+export const isHomeroomTeacherForSheet = (
+  sheet: Pick<ScoreSheet, 'classId'>,
+  assignments: TeacherAssignment[],
+) =>
+  assignments.some(
+    (assignment) =>
+      assignment.assignmentType === 'HOMEROOM' &&
+      assignment.isActive &&
+      assignment.classId === sheet.classId,
   );
 
 export const canEditScoreSheet = (

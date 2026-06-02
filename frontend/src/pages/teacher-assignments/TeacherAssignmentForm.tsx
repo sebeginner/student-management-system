@@ -9,6 +9,7 @@ import type {
   TeacherAssignmentPayload,
   TeacherAssignmentType,
 } from '../../lib/academic-api';
+import { commonLabels } from '../../lib/uiText';
 
 interface TeacherAssignmentFormProps {
   assignment?: TeacherAssignment | null;
@@ -21,6 +22,10 @@ interface TeacherAssignmentFormProps {
   onCancel: () => void;
   onSubmit: (payload: TeacherAssignmentPayload) => Promise<void>;
 }
+
+const fieldClass = 'space-y-1.5 text-sm font-medium text-slate-700';
+const selectClass =
+  'h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500';
 
 export const TeacherAssignmentForm = ({
   assignment,
@@ -57,6 +62,7 @@ export const TeacherAssignmentForm = ({
   const availableSemesters = semesters.filter(
     (semester) => semester.schoolYearId === Number(schoolYearId),
   );
+  const isSubjectAssignment = assignmentType === 'SUBJECT';
 
   useEffect(() => {
     if (!selectedClass) {
@@ -82,73 +88,30 @@ export const TeacherAssignmentForm = ({
       schoolYearId: Number(schoolYearId),
       assignmentType,
       isActive,
-      subjectId: assignmentType === 'SUBJECT' ? Number(subjectId) : null,
-      semesterId: assignmentType === 'SUBJECT' ? Number(semesterId) : null,
+      subjectId: isSubjectAssignment ? Number(subjectId) : null,
+      semesterId: isSubjectAssignment ? Number(semesterId) : null,
     };
 
     await onSubmit(payload);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+        Chọn “Chủ nhiệm” để phân công GVCN theo năm học. Chọn “Bộ môn” để phân
+        công GVBM theo lớp, môn học và học kỳ.
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Teacher</span>
-          <select
-            required
-            value={teacherId}
-            onChange={(event) => setTeacherId(event.target.value)}
-            className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">Select teacher</option>
-            {teachers.map((teacher) => (
-              <option key={teacher.id} value={teacher.id}>
-                {teacher.teacherCode} - {teacher.fullName}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Class</span>
-          <select
-            required
-            value={classId}
-            onChange={(event) => setClassId(event.target.value)}
-            className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">Select class</option>
-            {classes.map((classItem) => (
-              <option key={classItem.id} value={classItem.id}>
-                {classItem.name} - {classItem.schoolYear?.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Assignment type</span>
-          <select
-            value={assignmentType}
-            onChange={(event) =>
-              setAssignmentType(event.target.value as TeacherAssignmentType)
-            }
-            className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="HOMEROOM">HOMEROOM</option>
-            <option value="SUBJECT">SUBJECT</option>
-          </select>
-        </label>
-
-        <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>School year</span>
+        <label className={fieldClass}>
+          <span>Năm học</span>
           <select
             required
             value={schoolYearId}
             onChange={(event) => setSchoolYearId(event.target.value)}
-            className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className={selectClass}
           >
-            <option value="">Select school year</option>
+            <option value="">Chọn năm học</option>
             {schoolYears.map((year) => (
               <option key={year.id} value={year.id}>
                 {year.name}
@@ -157,43 +120,102 @@ export const TeacherAssignmentForm = ({
           </select>
         </label>
 
-        {assignmentType === 'SUBJECT' ? (
-          <>
-            <label className="space-y-1 text-sm font-medium text-slate-700">
-              <span>Subject</span>
-              <select
-                required
-                value={subjectId}
-                onChange={(event) => setSubjectId(event.target.value)}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option value="">Select subject</option>
-                {subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <label className={fieldClass}>
+          <span>Học kỳ</span>
+          <select
+            required={isSubjectAssignment}
+            disabled={!isSubjectAssignment}
+            value={semesterId}
+            onChange={(event) => setSemesterId(event.target.value)}
+            className={selectClass}
+          >
+            <option value="">
+              {isSubjectAssignment
+                ? 'Chọn học kỳ'
+                : 'Không áp dụng cho chủ nhiệm'}
+            </option>
+            {availableSemesters.map((semester) => (
+              <option key={semester.id} value={semester.id}>
+                {semester.name}
+              </option>
+            ))}
+          </select>
+          {!isSubjectAssignment ? (
+            <span className="text-xs font-normal text-slate-500">
+              Phân công chủ nhiệm áp dụng theo năm học.
+            </span>
+          ) : null}
+        </label>
 
-            <label className="space-y-1 text-sm font-medium text-slate-700">
-              <span>Semester</span>
-              <select
-                required
-                value={semesterId}
-                onChange={(event) => setSemesterId(event.target.value)}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option value="">Select semester</option>
-                {availableSemesters.map((semester) => (
-                  <option key={semester.id} value={semester.id}>
-                    {semester.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </>
-        ) : null}
+        <label className={fieldClass}>
+          <span>Lớp</span>
+          <select
+            required
+            value={classId}
+            onChange={(event) => setClassId(event.target.value)}
+            className={selectClass}
+          >
+            <option value="">Chọn lớp</option>
+            {classes.map((classItem) => (
+              <option key={classItem.id} value={classItem.id}>
+                {classItem.name} - {classItem.schoolYear?.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={fieldClass}>
+          <span>Môn học</span>
+          <select
+            required={isSubjectAssignment}
+            disabled={!isSubjectAssignment}
+            value={subjectId}
+            onChange={(event) => setSubjectId(event.target.value)}
+            className={selectClass}
+          >
+            <option value="">
+              {isSubjectAssignment
+                ? 'Chọn môn học'
+                : 'Không áp dụng cho chủ nhiệm'}
+            </option>
+            {subjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={fieldClass}>
+          <span>Giáo viên</span>
+          <select
+            required
+            value={teacherId}
+            onChange={(event) => setTeacherId(event.target.value)}
+            className={selectClass}
+          >
+            <option value="">Chọn giáo viên</option>
+            {teachers.map((teacher) => (
+              <option key={teacher.id} value={teacher.id}>
+                {teacher.teacherCode} - {teacher.fullName}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={fieldClass}>
+          <span>Loại phân công</span>
+          <select
+            value={assignmentType}
+            onChange={(event) =>
+              setAssignmentType(event.target.value as TeacherAssignmentType)
+            }
+            className={selectClass}
+          >
+            <option value="HOMEROOM">Chủ nhiệm</option>
+            <option value="SUBJECT">Bộ môn</option>
+          </select>
+        </label>
       </div>
 
       <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -201,25 +223,25 @@ export const TeacherAssignmentForm = ({
           type="checkbox"
           checked={isActive}
           onChange={(event) => setIsActive(event.target.checked)}
-          className="h-4 w-4 rounded border-slate-300"
+          className="h-4 w-4 rounded border-slate-300 text-blue-600"
         />
-        Active assignment
+        Phân công đang hiệu lực
       </label>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          Cancel
+          {commonLabels.cancel}
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
         >
-          {isSaving ? 'Saving...' : 'Save'}
+          {isSaving ? commonLabels.saving : commonLabels.save}
         </button>
       </div>
     </form>

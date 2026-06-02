@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { getApiErrorMessage } from './lib/api';
+import { LogIn } from 'lucide-react';
 import { useAuthStore } from './lib/auth-store';
 
 type LocationState = {
@@ -8,6 +8,14 @@ type LocationState = {
     pathname?: string;
   };
 };
+
+const demoAccounts = [
+  'admin / Admin@123',
+  'giaovu01 / Staff@123',
+  'manager01 / Manager@123',
+  'teacher01 / Teacher@123',
+  'student01 / Student@123',
+];
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -26,8 +34,8 @@ function Login() {
     try {
       await login(username, password);
       navigate(from, { replace: true });
-    } catch (loginError) {
-      setError(getApiErrorMessage(loginError));
+    } catch {
+      setError('Tên đăng nhập hoặc mật khẩu không đúng');
     }
   };
 
@@ -36,36 +44,55 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-white px-6 py-10">
       <form
         onSubmit={handleLogin}
-        className="w-full max-w-sm rounded bg-white p-8 shadow-sm"
+        className="w-full max-w-[520px]"
       >
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold text-slate-900">Dang nhap</h1>
-          <p className="mt-1 text-sm text-slate-500">Student Management System</p>
+        <div className="mb-12 text-center">
+          <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm">
+            <LogIn size={56} strokeWidth={2.4} />
+          </div>
+          <h1 className="mt-8 text-3xl font-semibold text-slate-700">
+            Đăng nhập hệ thống
+          </h1>
+          <p className="mt-4 text-xl font-medium text-slate-500">
+            Phần mềm quản lý học sinh cấp 3
+          </p>
         </div>
 
-        <input
-          type="text"
-          placeholder="Ten dang nhap"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          autoComplete="username"
-          className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
+        <div className="space-y-8">
+          <label className="block space-y-3">
+            <span className="text-xl font-medium text-slate-700">
+              Tên đăng nhập
+            </span>
+            <input
+              type="text"
+              placeholder="Nhập tên đăng nhập"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              className="h-16 w-full rounded-2xl border border-slate-200 px-6 text-xl text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+            />
+          </label>
 
-        <input
-          type="password"
-          placeholder="Mat khau"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-          className="mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
+          <label className="block space-y-3">
+            <span className="text-xl font-medium text-slate-700">
+              Mật khẩu
+            </span>
+            <input
+              type="password"
+              placeholder="Nhập mật khẩu"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              className="h-16 w-full rounded-2xl border border-slate-200 px-6 text-xl text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+            />
+          </label>
+        </div>
 
         {error ? (
-          <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-700">
             {error}
           </div>
         ) : null}
@@ -73,10 +100,23 @@ function Login() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+          className="mt-10 h-16 w-full rounded-2xl bg-indigo-600 px-6 text-xl font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
         >
-          {isLoading ? 'Dang dang nhap...' : 'Vao he thong'}
+          {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
+
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Tài khoản demo
+          </div>
+          <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+            {demoAccounts.map((account) => (
+              <div key={account} className="font-medium">
+                {account}
+              </div>
+            ))}
+          </div>
+        </div>
       </form>
     </div>
   );

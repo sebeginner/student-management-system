@@ -13,7 +13,7 @@ export const PlaceholderPage = ({ title, description }: PlaceholderPageProps) =>
         ) : null}
       </div>
       <div className="rounded border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
-        Man hinh nay da san sang goi API that. Chua them du lieu mau o frontend.
+        Màn hình này đã sẵn sàng gọi API thật. Chưa thêm dữ liệu mẫu ở frontend.
       </div>
     </section>
   );

@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import type { Student, StudentPayload } from '../../lib/academic-api';
 import { toDateInputValue } from '../../lib/date';
+import { getStatusLabel } from '../../lib/statusLabels';
+import { commonLabels } from '../../lib/uiText';
 
 interface StudentFormProps {
   student?: Student | null;
@@ -19,6 +21,12 @@ const statusOptions = [
 ];
 
 const genderOptions = ['MALE', 'FEMALE', 'OTHER'];
+
+const genderLabels: Record<string, string> = {
+  MALE: 'Nam',
+  FEMALE: 'Nữ',
+  OTHER: 'Khác',
+};
 
 const cleanText = (value: string) => {
   const trimmed = value.trim();
@@ -67,7 +75,7 @@ export const StudentForm = ({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Student code</span>
+          <span>Mã học sinh</span>
           <input
             required
             value={studentCode}
@@ -77,7 +85,7 @@ export const StudentForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Full name</span>
+          <span>Họ và tên</span>
           <input
             required
             value={fullName}
@@ -87,7 +95,7 @@ export const StudentForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Gender</span>
+          <span>Giới tính</span>
           <select
             value={gender}
             onChange={(event) => setGender(event.target.value)}
@@ -95,14 +103,14 @@ export const StudentForm = ({
           >
             {genderOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {genderLabels[option] ?? option}
               </option>
             ))}
           </select>
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Status</span>
+          <span>{commonLabels.status}</span>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
@@ -110,14 +118,14 @@ export const StudentForm = ({
           >
             {statusOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {getStatusLabel(option)}
               </option>
             ))}
           </select>
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Date of birth</span>
+          <span>Ngày sinh</span>
           <input
             required
             type="date"
@@ -128,7 +136,7 @@ export const StudentForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Admission date</span>
+          <span>Ngày tiếp nhận</span>
           <input
             required
             type="date"
@@ -139,7 +147,7 @@ export const StudentForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Email</span>
+          <span>Thư điện tử</span>
           <input
             type="email"
             value={email}
@@ -149,7 +157,7 @@ export const StudentForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Address</span>
+          <span>Địa chỉ</span>
           <input
             value={address}
             onChange={(event) => setAddress(event.target.value)}
@@ -159,7 +167,7 @@ export const StudentForm = ({
       </div>
 
       <label className="block space-y-1 text-sm font-medium text-slate-700">
-        <span>Note</span>
+        <span>Ghi chú</span>
         <textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
@@ -173,14 +181,14 @@ export const StudentForm = ({
           onClick={onCancel}
           className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
         >
-          Cancel
+          {commonLabels.cancel}
         </button>
         <button
           type="submit"
           disabled={isSaving}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
         >
-          {isSaving ? 'Saving...' : 'Save'}
+          {isSaving ? commonLabels.saving : commonLabels.save}
         </button>
       </div>
     </form>

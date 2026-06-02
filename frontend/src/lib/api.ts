@@ -28,26 +28,26 @@ export const api = axios.create({
 });
 
 const apiErrorMessages: Record<string, string> = {
-  CLASS_FULL: 'Lop da du si so.',
-  STUDENT_ALREADY_ENROLLED: 'Hoc sinh da duoc phan lop.',
-  INVALID_TRANSFER_DIFFERENT_GRADE: 'Chi duoc chuyen sang lop cung khoi.',
-  HOMEROOM_ALREADY_ASSIGNED: 'Lop nay da co giao vien chu nhiem.',
-  SUBJECT_TEACHER_ALREADY_ASSIGNED: 'Mon/lop/hoc ky nay da co giao vien bo mon.',
-  INVALID_HOMEROOM_ASSIGNMENT: 'Phan cong GVCN khong hop le.',
-  INVALID_SUBJECT_ASSIGNMENT: 'Phan cong GVBM khong hop le.',
-  SCORE_INVALID_RANGE: 'Diem phai nam trong khoang hop le.',
-  SCORE_SHEET_LOCKED: 'Bang diem da khoa, khong the sua truc tiep.',
-  SCORE_SHEET_NOT_SUBMITTED: 'Chi co the khoa bang diem da submit.',
+  CLASS_FULL: 'Lớp đã đủ sĩ số.',
+  STUDENT_ALREADY_ENROLLED: 'Học sinh đã được phân lớp.',
+  INVALID_TRANSFER_DIFFERENT_GRADE: 'Chỉ được chuyển sang lớp cùng khối.',
+  HOMEROOM_ALREADY_ASSIGNED: 'Lớp này đã có giáo viên chủ nhiệm.',
+  SUBJECT_TEACHER_ALREADY_ASSIGNED: 'Môn/lớp/học kỳ này đã có giáo viên bộ môn.',
+  INVALID_HOMEROOM_ASSIGNMENT: 'Phân công GVCN không hợp lệ.',
+  INVALID_SUBJECT_ASSIGNMENT: 'Phân công GVBM không hợp lệ.',
+  SCORE_INVALID_RANGE: 'Điểm phải nằm trong khoảng hợp lệ.',
+  SCORE_SHEET_LOCKED: 'Bảng điểm đã khóa, không thể sửa trực tiếp.',
+  SCORE_SHEET_NOT_SUBMITTED: 'Chỉ có thể khóa bảng điểm đã gửi.',
   SCORE_SHEET_SUBMIT_MISSING_REQUIRED_SCORES:
-    'Can nhap du diem bat buoc truoc khi submit.',
-  STUDENT_NOT_IN_CLASS: 'Hoc sinh khong thuoc lop cua bang diem.',
-  NOT_SUBJECT_TEACHER: 'Giao vien khong phu trach mon/lop nay.',
+    'Cần nhập đủ điểm bắt buộc trước khi submit.',
+  STUDENT_NOT_IN_CLASS: 'Học sinh không thuộc lớp của bảng điểm.',
+  NOT_SUBJECT_TEACHER: 'Giáo viên không phụ trách môn/lớp này.',
   SCORE_CHANGE_REQUEST_DUPLICATED:
-    'Da co yeu cau sua diem dang cho xu ly cho diem nay.',
-  REPORT_DATA_NOT_READY: 'Chua co du lieu san sang de lap bao cao.',
-  SCORE_SHEET_NOT_LOCKED: 'Bao cao chinh thuc chi dung bang diem da khoa.',
-  FORBIDDEN_REPORT_SCOPE: 'Khong co quyen xem bao cao trong pham vi nay.',
-  NOT_STUDENT_OWNER: 'Hoc sinh chi duoc xem diem cua chinh minh.',
+    'Đã có yêu cầu sửa điểm đang chờ xử lý cho điểm này.',
+  REPORT_DATA_NOT_READY: 'Chưa có dữ liệu sẵn sàng để lập báo cáo.',
+  SCORE_SHEET_NOT_LOCKED: 'Báo cáo chính thức chỉ dùng bảng điểm đã khóa.',
+  FORBIDDEN_REPORT_SCOPE: 'Không có quyền xem báo cáo trong phạm vi này.',
+  NOT_STUDENT_OWNER: 'Học sinh chỉ được xem điểm của chính mình.',
 };
 
 const getNestedErrorKey = (payload: unknown) => {
@@ -119,6 +119,10 @@ api.interceptors.response.use(
 
 export const getApiErrorMessage = (error: unknown) => {
   if (axios.isAxiosError(error)) {
+    if (!error.response) {
+      return 'Không kết nối được tới máy chủ. Vui lòng kiểm tra backend hoặc cấu hình API.';
+    }
+
     const data = error.response?.data;
     const errorKey = getNestedErrorKey(data);
     const message = normalizeApiMessage(data?.message);
@@ -130,7 +134,7 @@ export const getApiErrorMessage = (error: unknown) => {
     return error.message;
   }
 
-  return 'Da co loi xay ra.';
+  return 'Đã có lỗi xảy ra.';
 };
 
 export const getApiErrorKey = (error: unknown) => {
@@ -141,10 +145,4 @@ export const getApiErrorKey = (error: unknown) => {
   return getNestedErrorKey(error.response?.data);
 };
 
-export const getResponseData = <T>(payload: T | { data: T }) => {
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    return (payload as { data: T }).data;
-  }
-
-  return payload as T;
-};
+export const getResponseData = <T>(payload: { data: T }) => payload.data;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { academicApi, type MyStudentScore } from '../../lib/academic-api';
 import { useToastStore } from '../../lib/toast-store';
+import { menuLabels } from '../../lib/uiText';
 import { assessmentColumns, scoreDetailKey } from '../scores/score-utils';
 import { formatNumber, getReportErrorMessage } from '../reports/report-utils';
 
@@ -37,9 +38,11 @@ export const MyScoresPage = () => {
   return (
     <section className="space-y-5">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">My Scores</h2>
+        <h2 className="text-2xl font-semibold text-slate-900">
+          {menuLabels.myScores}
+        </h2>
         <p className="mt-1 text-sm text-slate-600">
-          Scores are loaded from your authenticated student account.
+          Điểm được tải từ tài khoản học sinh đang đăng nhập.
         </p>
       </div>
 
@@ -47,23 +50,23 @@ export const MyScoresPage = () => {
         <table className="min-w-[920px] divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
-              <th className="px-4 py-3">Subject</th>
-              <th className="px-4 py-3">Class</th>
-              <th className="px-4 py-3">Semester</th>
+              <th className="px-4 py-3">Môn học</th>
+              <th className="px-4 py-3">Lớp</th>
+              <th className="px-4 py-3">Học kỳ</th>
               {assessmentColumns.map((column) => (
                 <th key={scoreDetailKey(column.testTypeCode, column.attemptNo)} className="px-4 py-3">
                   {column.label}
                 </th>
               ))}
-              <th className="px-4 py-3">Average</th>
-              <th className="px-4 py-3">Result</th>
+              <th className="px-4 py-3">Điểm TB</th>
+              <th className="px-4 py-3">Kết quả</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                  Loading scores...
+                  Đang tải điểm...
                 </td>
               </tr>
             ) : null}
@@ -71,7 +74,7 @@ export const MyScoresPage = () => {
             {!isLoading && scores.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                  Chua co du lieu diem.
+                  Chưa có dữ liệu điểm.
                 </td>
               </tr>
             ) : null}
@@ -99,8 +102,8 @@ export const MyScoresPage = () => {
                       {score.passStatus === null || score.passStatus === undefined
                         ? '-'
                         : score.passStatus
-                          ? 'PASS'
-                          : 'FAIL'}
+                          ? 'Đạt'
+                          : 'Chưa đạt'}
                     </td>
                   </tr>
                 ))

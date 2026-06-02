@@ -73,7 +73,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = response.data.accessToken ?? response.data.access_token;
 
       if (!token) {
-        throw new Error('Login response does not include accessToken.');
+        throw new Error('Phản hồi đăng nhập không có accessToken.');
       }
 
       setAccessToken(token);
@@ -122,7 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await api.post('/auth/logout');
       }
     } catch {
-      // Client session must be cleared even if backend logout is unavailable.
+      // Luôn xóa phiên phía client dù backend logout tạm thời không khả dụng.
     } finally {
       get().clearSession();
     }

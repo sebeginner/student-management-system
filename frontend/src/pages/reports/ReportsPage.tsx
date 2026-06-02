@@ -1,4 +1,17 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import {
   academicApi,
   type ClassSemesterReport,
@@ -9,7 +22,17 @@ import {
   type SubjectSummaryReport,
 } from '../../lib/academic-api';
 import { useToastStore } from '../../lib/toast-store';
-import { formatNumber, getReportErrorMessage } from './report-utils';
+import { menuLabels } from '../../lib/uiText';
+import {
+  calculateFailCount,
+  calculatePassRate,
+  formatNumber,
+  formatPercent,
+  getReportErrorMessage,
+  reportColors,
+} from './report-utils';
+
+const loadErrorMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.';
 
 export const ReportsPage = () => {
   const showToast = useToastStore((state) => state.showToast);
@@ -29,8 +52,38 @@ export const ReportsPage = () => {
   const [subjectReport, setSubjectReport] =
     useState<SubjectSummaryReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  const selectedSemester = semesters.find(
+    (semester) => semester.id === Number(selectedSemesterId),
+  );
+
+  const subjectTotals = useMemo(() => {
+    const details = subjectReport?.details ?? [];
+    const studentCount = details.reduce(
+      (total, detail) => total + detail.studentCount,
+      0,
+    );
+    const passCount = details.reduce(
+      (total, detail) => total + detail.passCount,
+      0,
+    );
+    const failCount = calculateFailCount(studentCount, passCount);
+    const passRate = calculatePassRate(passCount, studentCount);
+    const average =
+      details.length > 0
+        ? details.reduce(
+            (total, detail) => total + (detail.subjectAverage ?? 0),
+            0,
+          ) / details.length
+        : null;
+
+    return { average, failCount, passCount, passRate, studentCount };
+  }, [subjectReport]);
 
   const loadMasterData = useCallback(async () => {
+    setLoadError('');
+
     try {
       const [classData, subjectData, semesterData] = await Promise.all([
         academicApi.getClasses(),
@@ -55,6 +108,7 @@ export const ReportsPage = () => {
           ),
       );
     } catch (error) {
+      setLoadError(loadErrorMessage);
       showToast(getReportErrorMessage(error), 'error');
     }
   }, [showToast]);
@@ -81,9 +135,13 @@ export const ReportsPage = () => {
     }
   }, [loadDashboard, selectedSemesterId]);
 
-  const loadClassReport = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const loadClassReport = async () => {
+    if (!selectedClassId || !selectedSemesterId) {
+      return;
+    }
+
     setIsLoading(true);
+    setLoadError('');
 
     try {
       const data = await academicApi.getClassSemesterReport({
@@ -94,15 +152,20 @@ export const ReportsPage = () => {
       setClassReport(data);
     } catch (error) {
       setClassReport(null);
+      setLoadError(loadErrorMessage);
       showToast(getReportErrorMessage(error), 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadSubjectReport = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const loadSubjectReport = async () => {
+    if (!selectedSubjectId || !selectedSemesterId) {
+      return;
+    }
+
     setIsLoading(true);
+    setLoadError('');
 
     try {
       const data = await academicApi.getSubjectSummaryReport({
@@ -114,6 +177,7 @@ export const ReportsPage = () => {
       setSubjectReport(data);
     } catch (error) {
       setSubjectReport(null);
+      setLoadError(loadErrorMessage);
       showToast(getReportErrorMessage(error), 'error');
     } finally {
       setIsLoading(false);
@@ -122,180 +186,209 @@ export const ReportsPage = () => {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Reports</h2>
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-2xl font-semibold text-slate-900">
+          {menuLabels.reports}
+        </h2>
         <p className="mt-1 text-sm text-slate-600">
-          School-wide dashboard, class semester, and subject summary reports.
+          Báo cáo học kỳ và báo cáo môn học theo dữ liệu bảng điểm hiện có.
         </p>
       </div>
 
-      <div className="rounded border border-slate-200 bg-white p-4">
-        <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-          <input
-            type="checkbox"
-            checked={includeUnOfficial}
-            onChange={(event) => setIncludeUnOfficial(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300"
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="text-base font-semibold text-slate-900">Bộ lọc báo cáo</h3>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <ReadOnlyField
+            label="Năm học"
+            value={selectedSemester?.schoolYear?.name ?? '-'}
           />
-          Include unofficial score sheets
-        </label>
+          <SelectField
+            label="Học kỳ"
+            value={selectedSemesterId}
+            onChange={setSelectedSemesterId}
+            options={semesters.map((item) => ({
+              value: String(item.id),
+              label: `${item.schoolYear?.name ?? item.schoolYearId} ${item.name}`,
+            }))}
+          />
+          <SelectField
+            label="Lớp"
+            value={selectedClassId}
+            onChange={setSelectedClassId}
+            options={classes.map((item) => ({
+              value: String(item.id),
+              label: item.name,
+            }))}
+          />
+          <SelectField
+            label="Môn học"
+            value={selectedSubjectId}
+            onChange={setSelectedSubjectId}
+            options={subjects.map((item) => ({
+              value: String(item.id),
+              label: item.name,
+            }))}
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={includeUnOfficial}
+              onChange={(event) => setIncludeUnOfficial(event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            Bao gồm dữ liệu chưa chính thức
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={isLoading || !selectedClassId || !selectedSemesterId}
+              onClick={() => void loadClassReport()}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
+            >
+              Tải báo cáo học kỳ
+            </button>
+            <button
+              type="button"
+              disabled={isLoading || !selectedSubjectId || !selectedSemesterId}
+              onClick={() => void loadSubjectReport()}
+              className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              Tải báo cáo môn học
+            </button>
+          </div>
+        </div>
       </div>
+
+      {loadError ? <ErrorState /> : null}
+      {isLoading ? <LoadingState /> : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded border border-slate-200 bg-white p-4">
-          <div className="text-xs uppercase text-slate-500">Students</div>
-          <div className="mt-1 text-2xl font-semibold">
-            {dashboard?.studentCount ?? '-'}
-          </div>
-        </div>
-        <div className="rounded border border-slate-200 bg-white p-4">
-          <div className="text-xs uppercase text-slate-500">Classes</div>
-          <div className="mt-1 text-2xl font-semibold">
-            {dashboard?.classCount ?? '-'}
-          </div>
-        </div>
-        <div className="rounded border border-slate-200 bg-white p-4">
-          <div className="text-xs uppercase text-slate-500">Subjects</div>
-          <div className="mt-1 text-2xl font-semibold">
-            {dashboard?.subjectCount ?? '-'}
-          </div>
-        </div>
-        <div className="rounded border border-slate-200 bg-white p-4">
-          <div className="text-xs uppercase text-slate-500">Score sheets</div>
-          <div className="mt-1 text-2xl font-semibold">
-            {dashboard?.scoreSheetCount ?? '-'}
-          </div>
-        </div>
-        <div className="rounded border border-slate-200 bg-white p-4">
-          <div className="text-xs uppercase text-slate-500">Locked</div>
-          <div className="mt-1 text-2xl font-semibold">
-            {dashboard?.lockedScoreSheetCount ?? '-'}
-          </div>
-        </div>
+        <MetricCard label="Tổng số học sinh" value={dashboard?.studentCount ?? '-'} />
+        <MetricCard label="Lớp" value={dashboard?.classCount ?? '-'} />
+        <MetricCard label="Môn học" value={dashboard?.subjectCount ?? '-'} />
+        <MetricCard label="Bảng điểm" value={dashboard?.scoreSheetCount ?? '-'} />
+        <MetricCard
+          label="Bảng điểm đã khóa"
+          value={dashboard?.lockedScoreSheetCount ?? '-'}
+        />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <form
-          onSubmit={loadClassReport}
-          className="space-y-4 rounded border border-slate-200 bg-white p-5"
-        >
-          <h3 className="text-lg font-semibold text-slate-900">
-            Class semester report
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              label="Class"
-              value={selectedClassId}
-              onChange={setSelectedClassId}
-              options={classes.map((item) => ({
-                value: String(item.id),
-                label: item.name,
-              }))}
+      {classReport ? (
+        <ReportSection title="Báo cáo học kỳ">
+          <div className="grid gap-3 md:grid-cols-5">
+            <MetricCard label="Tổng số học sinh" value={classReport.studentCount} />
+            <MetricCard label="Số học sinh đạt" value={classReport.passCount} />
+            <MetricCard
+              label="Số học sinh chưa đạt"
+              value={classReport.failCount}
             />
-            <SelectField
-              label="Semester"
-              value={selectedSemesterId}
-              onChange={setSelectedSemesterId}
-              options={semesters.map((item) => ({
-                value: String(item.id),
-                label: `${item.schoolYear?.name ?? item.schoolYearId} ${item.name}`,
-              }))}
+            <MetricCard
+              label="Tỷ lệ đạt"
+              value={formatPercent(
+                calculatePassRate(classReport.passCount, classReport.studentCount),
+              )}
+            />
+            <MetricCard
+              label="Điểm trung bình"
+              value={formatNumber(classReport.classSemesterAverage)}
             />
           </div>
-          <button
-            type="submit"
-            disabled={isLoading || !selectedClassId || !selectedSemesterId}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
-          >
-            Load class report
-          </button>
 
-          {classReport ? (
-            <ReportSummary
-              items={[
-                ['Student count', classReport.studentCount],
-                ['Class average', formatNumber(classReport.classSemesterAverage)],
-                ['Pass count', classReport.passCount],
-                ['Fail count', classReport.failCount],
-              ]}
-            />
-          ) : null}
-        </form>
+          <ResultCharts
+            barTitle="Số lượng đạt/chưa đạt"
+            pieTitle="Tỷ lệ đạt"
+            barData={[
+              {
+                name: classReport.class.name,
+                'Số học sinh đạt': classReport.passCount,
+                'Số học sinh chưa đạt': classReport.failCount,
+              },
+            ]}
+            pieData={[
+              { name: 'Số học sinh đạt', value: classReport.passCount },
+              { name: 'Số học sinh chưa đạt', value: classReport.failCount },
+            ]}
+          />
 
-        <form
-          onSubmit={loadSubjectReport}
-          className="space-y-4 rounded border border-slate-200 bg-white p-5"
-        >
-          <h3 className="text-lg font-semibold text-slate-900">
-            Subject summary
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <SelectField
-              label="Subject"
-              value={selectedSubjectId}
-              onChange={setSelectedSubjectId}
-              options={subjects.map((item) => ({
-                value: String(item.id),
-                label: item.name,
-              }))}
-            />
-            <SelectField
-              label="Class"
-              value={selectedClassId}
-              onChange={setSelectedClassId}
-              options={classes.map((item) => ({
-                value: String(item.id),
-                label: item.name,
-              }))}
-            />
-            <SelectField
-              label="Semester"
-              value={selectedSemesterId}
-              onChange={setSelectedSemesterId}
-              options={semesters.map((item) => ({
-                value: String(item.id),
-                label: item.name,
-              }))}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading || !selectedSubjectId || !selectedSemesterId}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
-          >
-            Load subject report
-          </button>
-
-          {subjectReport ? (
-            <div className="overflow-hidden rounded border border-slate-200">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="min-w-[760px] divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
+                <tr>
+                  <th className="px-4 py-3">Mã học sinh</th>
+                  <th className="px-4 py-3">Họ tên</th>
+                  <th className="px-4 py-3">Số môn</th>
+                  <th className="px-4 py-3">Điểm trung bình</th>
+                  <th className="px-4 py-3">Kết quả</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {classReport.students.length === 0 ? (
                   <tr>
-                    <th className="px-3 py-2">Class</th>
-                    <th className="px-3 py-2">Students</th>
-                    <th className="px-3 py-2">Average</th>
-                    <th className="px-3 py-2">Pass</th>
-                    <th className="px-3 py-2">Pass rate</th>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                      Chưa có dữ liệu
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {subjectReport.details.map((detail) => (
-                    <tr key={`${detail.classId}-${detail.subjectId}`}>
-                      <td className="px-3 py-2">{detail.className}</td>
-                      <td className="px-3 py-2">{detail.studentCount}</td>
-                      <td className="px-3 py-2">
-                        {formatNumber(detail.subjectAverage)}
-                      </td>
-                      <td className="px-3 py-2">{detail.passCount}</td>
-                      <td className="px-3 py-2">{detail.passRate}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-        </form>
-      </div>
+                ) : null}
+                {classReport.students.map((student) => (
+                  <tr key={student.studentId} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {student.studentCode}
+                    </td>
+                    <td className="px-4 py-3">{student.fullName}</td>
+                    <td className="px-4 py-3">{student.subjectCount}</td>
+                    <td className="px-4 py-3">
+                      {formatNumber(student.semesterAverage)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {student.result === 'PASS' ? 'Đạt' : 'Chưa đạt'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ReportSection>
+      ) : null}
+
+      {subjectReport ? (
+        <ReportSection title="Báo cáo môn học">
+          <div className="grid gap-3 md:grid-cols-5">
+            <MetricCard label="Tổng số học sinh" value={subjectTotals.studentCount} />
+            <MetricCard label="Số học sinh đạt" value={subjectTotals.passCount} />
+            <MetricCard
+              label="Số học sinh chưa đạt"
+              value={subjectTotals.failCount}
+            />
+            <MetricCard label="Tỷ lệ đạt" value={formatPercent(subjectTotals.passRate)} />
+            <MetricCard
+              label="Điểm trung bình"
+              value={formatNumber(subjectTotals.average)}
+            />
+          </div>
+
+          <ResultCharts
+            barTitle="Số lượng đạt/chưa đạt theo lớp"
+            pieTitle="Tỷ lệ đạt"
+            barData={subjectReport.details.map((detail) => ({
+              name: detail.className,
+              'Số học sinh đạt': detail.passCount,
+              'Số học sinh chưa đạt': calculateFailCount(
+                detail.studentCount,
+                detail.passCount,
+              ),
+            }))}
+            pieData={[
+              { name: 'Số học sinh đạt', value: subjectTotals.passCount },
+              { name: 'Số học sinh chưa đạt', value: subjectTotals.failCount },
+            ]}
+          />
+
+          <SubjectReportTable details={subjectReport.details} />
+        </ReportSection>
+      ) : null}
     </section>
   );
 };
@@ -308,15 +401,15 @@ interface SelectFieldProps {
 }
 
 const SelectField = ({ label, onChange, options, value }: SelectFieldProps) => (
-  <label className="space-y-1 text-sm font-medium text-slate-700">
+  <label className="space-y-1.5 text-sm font-medium text-slate-700">
     <span>{label}</span>
     <select
       required
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+      className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
     >
-      <option value="">Select</option>
+      <option value="">Chọn</option>
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -326,17 +419,161 @@ const SelectField = ({ label, onChange, options, value }: SelectFieldProps) => (
   </label>
 );
 
-const ReportSummary = ({
-  items,
+const ReadOnlyField = ({ label, value }: { label: string; value: string }) => (
+  <label className="space-y-1.5 text-sm font-medium text-slate-700">
+    <span>{label}</span>
+    <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+      {value}
+    </div>
+  </label>
+);
+
+const MetricCard = ({
+  label,
+  value,
 }: {
-  items: Array<[string, string | number]>;
+  label: string;
+  value: string | number;
 }) => (
-  <div className="grid gap-3 sm:grid-cols-2">
-    {items.map(([label, value]) => (
-      <div key={label} className="rounded border border-slate-200 p-3">
-        <div className="text-xs uppercase text-slate-500">{label}</div>
-        <div className="mt-1 text-xl font-semibold text-slate-900">{value}</div>
+  <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="text-xs font-semibold uppercase text-slate-500">{label}</div>
+    <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
+  </div>
+);
+
+const ReportSection = ({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) => (
+  <div className="space-y-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+    {children}
+  </div>
+);
+
+const ResultCharts = ({
+  barData,
+  barTitle,
+  pieData,
+  pieTitle,
+}: {
+  barData: Array<Record<string, string | number>>;
+  barTitle: string;
+  pieData: Array<{ name: string; value: number }>;
+  pieTitle: string;
+}) => (
+  <div className="grid gap-5 xl:grid-cols-2">
+    <div className="rounded-lg border border-slate-200 p-4">
+      <h4 className="mb-4 text-center text-sm font-semibold text-slate-700">
+        {barTitle}
+      </h4>
+      <div className="h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={barData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="Số học sinh đạt" fill={reportColors.pass} />
+            <Bar dataKey="Số học sinh chưa đạt" fill={reportColors.fail} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
-    ))}
+    </div>
+
+    <div className="rounded-lg border border-slate-200 p-4">
+      <h4 className="mb-4 text-center text-sm font-semibold text-slate-700">
+        {pieTitle}
+      </h4>
+      <div className="h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Tooltip />
+            <Legend />
+            <Pie
+              data={pieData}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={58}
+              outerRadius={92}
+              paddingAngle={3}
+            >
+              {pieData.map((entry) => (
+                <Cell
+                  key={entry.name}
+                  fill={
+                    entry.name.includes('chưa')
+                      ? reportColors.fail
+                      : reportColors.pass
+                  }
+                />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  </div>
+);
+
+const SubjectReportTable = ({
+  details,
+}: {
+  details: SubjectSummaryReport['details'];
+}) => (
+  <div className="overflow-x-auto rounded-lg border border-slate-200">
+    <table className="min-w-[900px] divide-y divide-slate-200 text-sm">
+      <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
+        <tr>
+          <th className="px-4 py-3">Lớp</th>
+          <th className="px-4 py-3">Môn học</th>
+          <th className="px-4 py-3">Tổng số học sinh</th>
+          <th className="px-4 py-3">Điểm trung bình</th>
+          <th className="px-4 py-3">Số học sinh đạt</th>
+          <th className="px-4 py-3">Số học sinh chưa đạt</th>
+          <th className="px-4 py-3">Tỷ lệ đạt</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-100">
+        {details.length === 0 ? (
+          <tr>
+            <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+              Chưa có dữ liệu
+            </td>
+          </tr>
+        ) : null}
+        {details.map((detail) => (
+          <tr key={`${detail.classId}-${detail.subjectId}`} className="hover:bg-slate-50">
+            <td className="px-4 py-3 font-medium text-slate-900">
+              {detail.className}
+            </td>
+            <td className="px-4 py-3">{detail.subjectName}</td>
+            <td className="px-4 py-3">{detail.studentCount}</td>
+            <td className="px-4 py-3">{formatNumber(detail.subjectAverage)}</td>
+            <td className="px-4 py-3">{detail.passCount}</td>
+            <td className="px-4 py-3">
+              {calculateFailCount(detail.studentCount, detail.passCount)}
+            </td>
+            <td className="px-4 py-3">{formatPercent(detail.passRate)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const LoadingState = () => (
+  <div className="rounded-lg border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-sm">
+    Đang tải dữ liệu...
+  </div>
+);
+
+const ErrorState = () => (
+  <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-8 text-center text-sm font-medium text-rose-700">
+    Đã xảy ra lỗi. Vui lòng thử lại.
   </div>
 );

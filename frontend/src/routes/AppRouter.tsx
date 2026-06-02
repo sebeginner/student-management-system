@@ -5,7 +5,6 @@ import { ClassDetailPage } from '../pages/classes/ClassDetailPage';
 import { ClassesPage } from '../pages/classes/ClassesPage';
 import { EnrollmentsPage } from '../pages/enrollments/EnrollmentsPage';
 import { DashboardPage } from '../pages/DashboardPage';
-import { PlaceholderPage } from '../pages/PlaceholderPage';
 import { ScoreChangeRequestsPage } from '../pages/score-change-requests/ScoreChangeRequestsPage';
 import { ClassReportPage } from '../pages/reports/ClassReportPage';
 import { ReportsPage } from '../pages/reports/ReportsPage';
@@ -14,9 +13,13 @@ import { ScoreEntryPage } from '../pages/scores/ScoreEntryPage';
 import { ScoreSheetsPage } from '../pages/scores/ScoreSheetsPage';
 import { StudentsPage } from '../pages/students/StudentsPage';
 import { MyScoresPage } from '../pages/student/MyScoresPage';
+import { MyProfilePage } from '../pages/student/MyProfilePage';
 import { MyTeacherAssignmentsPage } from '../pages/teacher-assignments/MyTeacherAssignmentsPage';
 import { TeacherAssignmentsPage } from '../pages/teacher-assignments/TeacherAssignmentsPage';
 import { TeachersPage } from '../pages/teachers/TeachersPage';
+import { ParametersPage } from '../pages/parameters/ParametersPage';
+import { UsersPage } from '../pages/admin/UsersPage';
+import { RolesPage } from '../pages/admin/RolesPage';
 import { ProtectedRoute } from './ProtectedRoute';
 
 export const AppRouter = () => {
@@ -28,8 +31,8 @@ export const AppRouter = () => {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-            <Route path="users" element={<PlaceholderPage title="Users" />} />
-            <Route path="roles" element={<PlaceholderPage title="Roles" />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="roles" element={<RolesPage />} />
           </Route>
           <Route
             element={
@@ -48,19 +51,28 @@ export const AppRouter = () => {
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF', 'MANAGER']} />
             }
           >
-            <Route
-              path="enrollments"
-              element={<EnrollmentsPage />}
-            />
+            <Route path="enrollments" element={<EnrollmentsPage mode="assign" />} />
+            <Route path="transfer" element={<EnrollmentsPage mode="transfer" />} />
+          </Route>
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={['ADMIN', 'ACADEMIC_STAFF', 'MANAGER']}
+              />
+            }
+          >
+            <Route path="parameters" element={<ParametersPage />} />
           </Route>
           <Route
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF', 'TEACHER']} />
             }
           >
-            <Route path="scores" element={<ScoreSheetsPage />} />
-            <Route path="score-entry" element={<ScoreSheetsPage />} />
+            <Route path="scores" element={<ScoreSheetsPage mode="lookup" />} />
             <Route path="scores/sheets/:id" element={<ScoreEntryPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['TEACHER']} />}>
+            <Route path="score-entry" element={<ScoreSheetsPage mode="entry" />} />
           </Route>
           <Route
             element={
@@ -99,10 +111,7 @@ export const AppRouter = () => {
             <Route path="subject-report" element={<SubjectReportPage />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
-            <Route
-              path="my-profile"
-              element={<PlaceholderPage title="My Profile" />}
-            />
+            <Route path="my-profile" element={<MyProfilePage />} />
             <Route
               path="my-scores"
               element={<MyScoresPage />}

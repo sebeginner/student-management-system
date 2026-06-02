@@ -5,6 +5,8 @@ import type {
   SchoolClass,
   SchoolYear,
 } from '../../lib/academic-api';
+import { getStatusLabel } from '../../lib/statusLabels';
+import { commonLabels } from '../../lib/uiText';
 
 interface ClassFormProps {
   classItem?: SchoolClass | null;
@@ -66,7 +68,7 @@ export const ClassForm = ({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Class name</span>
+          <span>Tên lớp</span>
           <input
             required
             value={className}
@@ -76,7 +78,7 @@ export const ClassForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Class code</span>
+          <span>Mã lớp</span>
           <input
             value={classCode}
             onChange={(event) => setClassCode(event.target.value)}
@@ -85,7 +87,7 @@ export const ClassForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>School year</span>
+          <span>Năm học</span>
           <select
             required
             value={schoolYearId}
@@ -101,7 +103,7 @@ export const ClassForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Grade level</span>
+          <span>Khối lớp</span>
           <select
             required
             value={gradeLevelId}
@@ -117,7 +119,7 @@ export const ClassForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Max size</span>
+          <span>Sĩ số tối đa</span>
           <input
             min={1}
             type="number"
@@ -128,7 +130,7 @@ export const ClassForm = ({
         </label>
 
         <label className="space-y-1 text-sm font-medium text-slate-700">
-          <span>Status</span>
+          <span>{commonLabels.status}</span>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
@@ -136,7 +138,7 @@ export const ClassForm = ({
           >
             {statusOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {getStatusLabel(option)}
               </option>
             ))}
           </select>
@@ -149,14 +151,14 @@ export const ClassForm = ({
           onClick={onCancel}
           className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
         >
-          Cancel
+          {commonLabels.cancel}
         </button>
         <button
           type="submit"
           disabled={isSaving}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
         >
-          {isSaving ? 'Saving...' : 'Save'}
+          {isSaving ? commonLabels.saving : commonLabels.save}
         </button>
       </div>
     </form>

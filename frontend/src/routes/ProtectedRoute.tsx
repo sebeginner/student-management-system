@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore, type UserRole } from '../lib/auth-store';
+import { appText } from '../lib/uiText';
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[];
@@ -12,7 +13,7 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   if (isInitializing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-600">
-        Dang tai phien dang nhap...
+        {appText.loadingSession}
       </div>
     );
   }

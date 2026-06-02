@@ -9,7 +9,9 @@ import {
 } from '../../lib/academic-api';
 import { getApiErrorKey, getApiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../lib/auth-store';
+import { getStatusLabel } from '../../lib/statusLabels';
 import { useToastStore } from '../../lib/toast-store';
+import { commonLabels } from '../../lib/uiText';
 import {
   assessmentColumns,
   canEditScoreSheet,
@@ -22,6 +24,8 @@ import { ScoreChangeRequestModal } from './ScoreChangeRequestModal';
 
 type ScoreRowValues = Record<string, string>;
 type ScoreRows = Record<number, ScoreRowValues>;
+
+const loadErrorMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.';
 
 const getScoreErrorMessage = (error: unknown) => {
   const errorKey = getApiErrorKey(error);
@@ -49,6 +53,50 @@ const buildInitialRows = (
   return rows;
 };
 
+const getScoreSheetStatusClass = (status?: string) => {
+  switch (status) {
+    case 'LOCKED':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'SUBMITTED':
+      return 'border-blue-200 bg-blue-50 text-blue-700';
+    case 'NEEDS_CORRECTION':
+      return 'border-amber-200 bg-amber-50 text-amber-700';
+    default:
+      return 'border-slate-200 bg-slate-50 text-slate-700';
+  }
+};
+
+const getStudentScoreStatus = (studentScore?: StudentSubjectScore) => {
+  if (!studentScore) {
+    return {
+      label: 'Chưa nhập',
+      className: 'border-slate-200 bg-slate-50 text-slate-600',
+    };
+  }
+
+  if (studentScore.averageScore === null || studentScore.averageScore === undefined) {
+    return {
+      label: 'Đang nhập',
+      className: 'border-amber-200 bg-amber-50 text-amber-700',
+    };
+  }
+
+  if (studentScore.passStatus === false) {
+    return {
+      label: 'Chưa đạt',
+      className: 'border-rose-200 bg-rose-50 text-rose-700',
+    };
+  }
+
+  return {
+    label: 'Đã có điểm',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  };
+};
+
+const getAssessmentColumnLabel = (key: string, label: string) =>
+  key === 'oral' ? 'Miệng / 15 phút' : label;
+
 export const ScoreEntryPage = () => {
   const { id } = useParams();
   const scoreSheetId = Number(id);
@@ -59,6 +107,7 @@ export const ScoreEntryPage = () => {
   const [myAssignments, setMyAssignments] = useState<TeacherAssignment[]>([]);
   const [rows, setRows] = useState<ScoreRows>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [savingStudentId, setSavingStudentId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
@@ -103,6 +152,7 @@ export const ScoreEntryPage = () => {
     }
 
     setIsLoading(true);
+    setLoadError('');
 
     try {
       const sheetData = await academicApi.getScoreSheet(scoreSheetId);
@@ -118,6 +168,7 @@ export const ScoreEntryPage = () => {
       setMyAssignments(assignmentData);
       setRows(buildInitialRows(sheetData, studentData));
     } catch (error) {
+      setLoadError(loadErrorMessage);
       showToast(getScoreErrorMessage(error), 'error');
     } finally {
       setIsLoading(false);
@@ -173,7 +224,7 @@ export const ScoreEntryPage = () => {
         );
 
       await academicApi.updateStudentScore(sheet.id, studentId, { details });
-      showToast('Score saved successfully.', 'success');
+      showToast('Lưu nháp điểm thành công.', 'success');
       await loadSheet();
     } catch (error) {
       showToast(getScoreErrorMessage(error), 'error');
@@ -191,7 +242,7 @@ export const ScoreEntryPage = () => {
 
     try {
       await academicApi.submitScoreSheet(sheet.id);
-      showToast('Score sheet submitted successfully.', 'success');
+      showToast('Nộp bảng điểm thành công.', 'success');
       await loadSheet();
     } catch (error) {
       showToast(getScoreErrorMessage(error), 'error');
@@ -209,7 +260,7 @@ export const ScoreEntryPage = () => {
 
     try {
       await academicApi.lockScoreSheet(sheet.id);
-      showToast('Score sheet locked successfully.', 'success');
+      showToast('Khóa bảng điểm thành công.', 'success');
       await loadSheet();
     } catch (error) {
       showToast(getScoreErrorMessage(error), 'error');
@@ -220,177 +271,237 @@ export const ScoreEntryPage = () => {
 
   return (
     <section className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/scores" className="text-sm font-medium text-blue-700">
-            Back to score sheets
-          </Link>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">
-            {sheet
-              ? `${sheet.class.name} - ${sheet.subject.name}`
-              : 'Score entry'}
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            {sheet
-              ? `${sheet.semester.schoolYear?.name ?? ''} ${
-                  sheet.semester.name
-                } - ${sheet.status}`
-              : 'Loading score sheet...'}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {isLocked && !isSubjectTeacher ? (
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
             <Link
-              to="/score-change-requests"
-              className="rounded border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800"
+              to="/scores"
+              className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              View score change requests
+              Quay lại bảng điểm
             </Link>
-          ) : null}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-semibold text-slate-900">
+                Nhập bảng điểm
+              </h2>
+              {sheet ? (
+                <span
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${getScoreSheetStatusClass(
+                    sheet.status,
+                  )}`}
+                >
+                  {getStatusLabel(sheet.status)}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 text-sm text-slate-600">
+              {sheet
+                ? `${sheet.class.name} · ${sheet.subject.name} · ${
+                    sheet.semester.schoolYear?.name ?? ''
+                  } · ${sheet.semester.name}`
+                : 'Đang tải dữ liệu...'}
+            </p>
+          </div>
 
-          {user?.role === 'ACADEMIC_STAFF' ? (
-            <button
-              type="button"
-              onClick={handleLockSheet}
-              disabled={!canLock || isLocking}
-              className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-emerald-300"
-            >
-              {isLocking ? 'Locking...' : 'Lock'}
-            </button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {isLocked && !isSubjectTeacher ? (
+              <Link
+                to="/score-change-requests"
+                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100"
+              >
+                Xem yêu cầu sửa điểm
+              </Link>
+            ) : null}
 
-          {user?.role === 'TEACHER' ? (
-            <button
-              type="button"
-              onClick={handleSubmitSheet}
-              disabled={!canSubmit || isSubmitting}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-blue-300"
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit'}
-            </button>
-          ) : null}
+            {user?.role === 'ACADEMIC_STAFF' ? (
+              <button
+                type="button"
+                onClick={handleLockSheet}
+                disabled={!canLock || isLocking}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-300"
+              >
+                {isLocking ? 'Đang khóa...' : 'Khóa bảng điểm'}
+              </button>
+            ) : null}
+
+            {user?.role === 'TEACHER' ? (
+              <button
+                type="button"
+                onClick={handleSubmitSheet}
+                disabled={!canSubmit || isSubmitting}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
+              >
+                {isSubmitting ? 'Đang nộp...' : 'Nộp bảng điểm'}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      {!editable && sheet && user?.role === 'TEACHER' ? (
-        <div className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          You can view this sheet, but score entry is disabled because you are
-          not the subject teacher for this class, subject, and semester or the
-          sheet is locked.
+      {isLocked ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+          Bảng điểm đã khóa. Vui lòng gửi yêu cầu sửa điểm nếu cần điều chỉnh.
+        </div>
+      ) : null}
+
+      {!editable && sheet && user?.role === 'TEACHER' && !isLocked ? (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          Bạn có thể xem bảng điểm này, nhưng chỉ giáo viên bộ môn đúng lớp,
+          môn và học kỳ mới được nhập điểm.
         </div>
       ) : null}
 
       {user?.role === 'ACADEMIC_STAFF' ? (
-        <div className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          Academic staff can view and lock submitted score sheets. Direct score
-          entry is reserved for the assigned subject teacher.
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          Giáo vụ có thể xem và khóa bảng điểm đã nộp. Việc nhập điểm trực tiếp
+          dành cho giáo viên bộ môn được phân công.
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded border border-slate-200 bg-white">
-        <table className="min-w-[980px] divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Student</th>
-              {assessmentColumns.map((column) => (
-                <th key={column.key} className="px-4 py-3">
-                  {column.label}
-                </th>
-              ))}
-              <th className="px-4 py-3">Average</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoading ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                  Loading score sheet...
-                </td>
-              </tr>
-            ) : null}
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">
+              Danh sách học sinh
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Nhập điểm theo từng học sinh và lưu nháp trước khi nộp bảng điểm.
+            </p>
+          </div>
+        </div>
 
-            {!isLoading && classStudents.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                  No students in this class.
-                </td>
-              </tr>
-            ) : null}
+        {loadError ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-8 text-center text-sm font-medium text-rose-700">
+            {loadError}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-[1120px] divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
+                <tr>
+                  <th className="px-4 py-3">Mã học sinh</th>
+                  <th className="px-4 py-3">Họ tên</th>
+                  {assessmentColumns.map((column) => (
+                    <th key={column.key} className="px-4 py-3">
+                      {getAssessmentColumnLabel(column.key, column.label)}
+                    </th>
+                  ))}
+                  <th className="px-4 py-3">Trung bình</th>
+                  <th className="px-4 py-3">Trạng thái</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {isLoading ? (
+                  <tr>
+                    <td
+                      colSpan={9}
+                      className="px-4 py-8 text-center text-slate-500"
+                    >
+                      Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : null}
 
-            {!isLoading
-              ? classStudents.map((classStudent) => {
-                  const student = classStudent.student;
-                  const studentScore = scoreByStudentId.get(student.id);
+                {!isLoading && classStudents.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={9}
+                      className="px-4 py-8 text-center text-slate-500"
+                    >
+                      Chưa có dữ liệu
+                    </td>
+                  </tr>
+                ) : null}
 
-                  return (
-                    <tr key={student.id}>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-slate-900">
-                          {student.studentCode}
-                        </div>
-                        <div className="text-slate-600">{student.fullName}</div>
-                      </td>
-                      {assessmentColumns.map((column) => {
-                        const key = scoreDetailKey(
-                          column.testTypeCode,
-                          column.attemptNo,
-                        );
+                {!isLoading
+                  ? classStudents.map((classStudent) => {
+                      const student = classStudent.student;
+                      const studentScore = scoreByStudentId.get(student.id);
+                      const scoreStatus = getStudentScoreStatus(studentScore);
 
-                        return (
-                          <td key={column.key} className="px-4 py-3">
-                            <input
-                              type="number"
-                              min={0}
-                              max={10}
-                              step={0.01}
-                              value={rows[student.id]?.[key] ?? ''}
-                              onChange={(event) =>
-                                updateCell(student.id, key, event.target.value)
-                              }
-                              disabled={!editable}
-                              className="w-24 rounded border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100"
-                            />
+                      return (
+                        <tr key={student.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-medium text-slate-900">
+                            {student.studentCode}
                           </td>
-                        );
-                      })}
-                      <td className="px-4 py-3">
-                        {formatAverage(studentScore?.averageScore)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {isLocked && isSubjectTeacher && studentScore ? (
-                          <button
-                            type="button"
-                            onClick={() => setRequestStudentScore(studentScore)}
-                            className="rounded border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800"
-                          >
-                            Yeu cau sua
-                          </button>
-                        ) : (
-                          <form
-                            onSubmit={(event) =>
-                              void saveStudentScore(event, student.id)
-                            }
-                          >
-                            <button
-                              type="submit"
-                              disabled={!editable || savingStudentId === student.id}
-                              className="rounded border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-700 disabled:border-slate-200 disabled:text-slate-400"
+                          <td className="px-4 py-3 text-slate-700">
+                            {student.fullName}
+                          </td>
+                          {assessmentColumns.map((column) => {
+                            const key = scoreDetailKey(
+                              column.testTypeCode,
+                              column.attemptNo,
+                            );
+
+                            return (
+                              <td key={column.key} className="px-4 py-3">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={10}
+                                  step={0.01}
+                                  value={rows[student.id]?.[key] ?? ''}
+                                  onChange={(event) =>
+                                    updateCell(
+                                      student.id,
+                                      key,
+                                      event.target.value,
+                                    )
+                                  }
+                                  disabled={!editable}
+                                  className="h-10 w-24 rounded-lg border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500"
+                                />
+                              </td>
+                            );
+                          })}
+                          <td className="px-4 py-3 font-semibold text-slate-900">
+                            {formatAverage(studentScore?.averageScore)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${scoreStatus.className}`}
                             >
-                              {savingStudentId === student.id
-                                ? 'Saving...'
-                                : 'Save'}
-                            </button>
-                          </form>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              : null}
-          </tbody>
-        </table>
+                              {scoreStatus.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {isLocked && isSubjectTeacher && studentScore ? (
+                              <button
+                                type="button"
+                                onClick={() => setRequestStudentScore(studentScore)}
+                                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                              >
+                                Gửi yêu cầu sửa điểm
+                              </button>
+                            ) : (
+                              <form
+                                onSubmit={(event) =>
+                                  void saveStudentScore(event, student.id)
+                                }
+                              >
+                                <button
+                                  type="submit"
+                                  disabled={
+                                    !editable || savingStudentId === student.id
+                                  }
+                                  className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+                                >
+                                  {savingStudentId === student.id
+                                    ? commonLabels.saving
+                                    : 'Lưu nháp'}
+                                </button>
+                              </form>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  : null}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {sheet && requestStudentScore ? (
