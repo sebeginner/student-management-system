@@ -39,18 +39,24 @@ export class EnrollmentsController {
 
   @Post('enrollments/assign')
   @Roles('ACADEMIC_STAFF')
-  async assign(@Body() dto: AssignEnrollmentDto) {
+  async assign(
+    @Body() dto: AssignEnrollmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return successResponse(
-      await this.enrollmentsService.assign(dto),
+      await this.enrollmentsService.assign(dto, user),
       'Assigned',
     );
   }
 
   @Post('enrollments/transfer')
   @Roles('ACADEMIC_STAFF')
-  async transfer(@Body() dto: TransferEnrollmentDto) {
+  async transfer(
+    @Body() dto: TransferEnrollmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return successResponse(
-      await this.enrollmentsService.transfer(dto),
+      await this.enrollmentsService.transfer(dto, user),
       'Transferred',
     );
   }

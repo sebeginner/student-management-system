@@ -412,6 +412,117 @@ export interface ResetPasswordPayload {
   newPassword: string;
 }
 
+export const ACADEMIC_RATING_LABELS: Record<string, string> = {
+  EXCELLENT: 'Giỏi',
+  GOOD: 'Khá',
+  AVERAGE: 'Trung bình',
+  WEAK: 'Yếu',
+  POOR: 'Kém',
+};
+
+export const CONDUCT_RATING_LABELS: Record<string, string> = {
+  EXCELLENT: 'Tốt',
+  GOOD: 'Khá',
+  AVERAGE: 'Trung bình',
+  WEAK: 'Yếu',
+};
+
+export const YEAR_END_DECISION_LABELS: Record<string, string> = {
+  ADVANCE: 'Lên lớp',
+  REMEDIAL: 'Thi lại',
+  CONDUCT_REVIEW: 'Rèn luyện hè',
+  RETAIN: 'Ở lại',
+};
+
+export interface SemesterStudentResult {
+  id: number;
+  studentId: number;
+  semesterId: number;
+  classId: number;
+  semesterAverage: number;
+  academicRating: string;
+  subjectCount: number;
+  failedSubjectCount: number;
+  finalizedAt: string;
+  student: { id: number; studentCode: string; fullName: string; gender: string };
+  class: { id: number; name: string };
+}
+
+export interface YearEndResult {
+  id: number;
+  studentId: number;
+  schoolYearId: number;
+  classId: number;
+  hk1Average: number;
+  hk2Average: number;
+  yearAverage: number;
+  academicRating: string;
+  conductRating: string | null;
+  decision: string;
+  decisionNote: string | null;
+  generatedAt: string;
+  student: { id: number; studentCode: string; fullName: string; gender: string };
+  class: { id: number; name: string };
+  schoolYear: { name: string };
+}
+
+export interface ConductAssessment {
+  id: number;
+  studentId: number;
+  semesterId: number;
+  classId: number;
+  status: string;
+  finalRating: string | null;
+  teacherNote: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  student: { id: number; studentCode: string; fullName: string; gender: string };
+  class: { id: number; name: string };
+  semester: Semester;
+  criteria: { id: number; code: string; rating: string; note: string | null }[];
+}
+
+export interface TimetableSlot {
+  id: number;
+  semesterId: number;
+  classId: number;
+  subjectId: number;
+  teacherId: number;
+  dayOfWeek: number;
+  period: number;
+  room: string | null;
+  isActive: boolean;
+  class:   { id: number; name: string };
+  subject: { id: number; name: string; subjectCode: string };
+  teacher: { id: number; teacherCode: string; fullName: string };
+  semester: Semester;
+}
+
+export interface TimetableGrid {
+  slots: TimetableSlot[];
+  grid: Record<number, Record<number, TimetableSlot>>;
+}
+
+export interface AuditLogItem {
+  id: number;
+  action: string;
+  entityType: string;
+  entityId: number | null;
+  oldValue: string | null;
+  newValue: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  user: { id: number; username: string; fullName: string } | null;
+}
+
+export interface AuditLogPage {
+  total: number;
+  page: number;
+  limit: number;
+  items: AuditLogItem[];
+}
+
 export const academicApi = {
   async getStudents(params?: { keyword?: string; status?: string }) {
     const response = await api.get<ApiSuccess<Student[]>>('/students', {
@@ -787,6 +898,172 @@ export const academicApi = {
       `/users/${id}/reset-password`,
       payload,
     );
+    return getResponseData(response.data);
+  },
+
+  async getConductAssessments(params?: { semesterId?: number; classId?: number }) {
+    const response = await api.get<ApiSuccess<ConductAssessment[]>>('/conduct-assessments', { params });
+    return getResponseData(response.data);
+  },
+
+  async createConductBatch(semesterId: number, classId: number) {
+    const response = await api.post<ApiSuccess<{ created: number; total: number }>>(
+      '/conduct-assessments/batch',
+      null,
+      { params: { semesterId, classId } },
+    );
+    return getResponseData(response.data);
+  },
+
+  async updateConduct(id: number, payload: { criteria?: { code: string; rating: string; note?: string }[]; teacherNote?: string }) {
+    const response = await api.patch<ApiSuccess<ConductAssessment>>(`/conduct-assessments/${id}`, payload);
+    return getResponseData(response.data);
+  },
+
+  async submitConduct(id: number) {
+    const response = await api.post<ApiSuccess<ConductAssessment>>(`/conduct-assessments/${id}/submit`);
+    return getResponseData(response.data);
+  },
+
+  async finalizeConduct(id: number, payload: { finalRating: string; reviewNote?: string }) {
+    const response = await api.post<ApiSuccess<ConductAssessment>>(`/conduct-assessments/${id}/finalize`, payload);
+    return getResponseData(response.data);
+  },
+
+  async getStudentConduct(studentId: number) {
+    const response = await api.get<ApiSuccess<ConductAssessment[]>>(`/conduct-assessments/students/${studentId}`);
+    return getResponseData(response.data);
+  },
+
+  async finalizeSemester(semesterId: number) {
+    const response = await api.post<ApiSuccess<{ semesterId: number; semesterName: string; schoolYear: string; studentCount: number }>>(
+      `/semesters/${semesterId}/finalize`,
+    );
+    return getResponseData(response.data);
+  },
+
+  async getSemesterResults(semesterId: number, classId?: number) {
+    const response = await api.get<ApiSuccess<SemesterStudentResult[]>>(
+      `/semesters/${semesterId}/results`,
+      { params: { classId } },
+    );
+    return getResponseData(response.data);
+  },
+
+  async generateYearEnd(schoolYearId: number) {
+    const response = await api.post<ApiSuccess<{ schoolYearId: number; schoolYear: string; studentCount: number }>>(
+      `/school-years/${schoolYearId}/year-end`,
+    );
+    return getResponseData(response.data);
+  },
+
+  async getYearEndResults(schoolYearId: number, classId?: number) {
+    const response = await api.get<ApiSuccess<YearEndResult[]>>(
+      '/reports/year-end',
+      { params: { schoolYearId, classId } },
+    );
+    return getResponseData(response.data);
+  },
+
+  async downloadStudentTemplate(): Promise<void> {
+    const response = await api.get('/templates/students', { responseType: 'blob' });
+    const url = URL.createObjectURL(new Blob([response.data as BlobPart]));
+    const a = document.createElement('a'); a.href = url; a.download = 'mau-hoc-sinh.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  async downloadScoreSheetTemplate(sheetId: number): Promise<void> {
+    const response = await api.get('/templates/score-sheet', { params: { sheetId }, responseType: 'blob' });
+    const url = URL.createObjectURL(new Blob([response.data as BlobPart]));
+    const a = document.createElement('a'); a.href = url; a.download = `mau-diem-${sheetId}.xlsx`; a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  async previewStudentImport(file: File) {
+    const fd = new FormData(); fd.append('file', file);
+    const response = await api.post<ApiSuccess<{ valid: unknown[]; errors: { row: number; field: string; message: string }[] }>>(
+      '/students/import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return getResponseData(response.data);
+  },
+
+  async commitStudentImport(data: unknown[]) {
+    const response = await api.post<ApiSuccess<{ created: number }>>('/students/import/commit', { data });
+    return getResponseData(response.data);
+  },
+
+  async previewScoreImport(sheetId: number, file: File) {
+    const fd = new FormData(); fd.append('file', file);
+    const response = await api.post<ApiSuccess<{ valid: unknown[]; errors: { row: number; field: string; message: string }[]; sheetInfo: { className: string; subjectName: string; semesterName: string } }>>(
+      `/scores/sheets/${sheetId}/import/preview`, fd, { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return getResponseData(response.data);
+  },
+
+  async commitScoreImport(sheetId: number, data: unknown[]) {
+    const response = await api.post<ApiSuccess<{ updated: number }>>(
+      `/scores/sheets/${sheetId}/import/commit`, { data },
+    );
+    return getResponseData(response.data);
+  },
+
+  async downloadScoreSheetPdf(sheetId: number): Promise<void> {
+    const response = await api.get(`/scores/sheets/${sheetId}/pdf`, { responseType: 'blob' });
+    const url = URL.createObjectURL(new Blob([response.data as BlobPart], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bang-diem-${sheetId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  async downloadStudentTranscriptPdf(studentId: number, semesterId: number): Promise<void> {
+    const response = await api.get(
+      `/reports/student-transcript/${studentId}/pdf`,
+      { params: { semesterId }, responseType: 'blob' },
+    );
+    const url = URL.createObjectURL(new Blob([response.data as BlobPart], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `phieu-diem-${studentId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  async getTimetable(semesterId: number, classId: number) {
+    const response = await api.get<ApiSuccess<TimetableGrid>>('/timetable', { params: { semesterId, classId } });
+    return getResponseData(response.data);
+  },
+
+  async getMyTimetable(semesterId: number) {
+    const response = await api.get<ApiSuccess<TimetableGrid>>('/timetable/my', { params: { semesterId } });
+    return getResponseData(response.data);
+  },
+
+  async upsertTimetableSlot(payload: {
+    semesterId: number; classId: number; subjectId: number; teacherId: number;
+    dayOfWeek: number; period: number; room?: string;
+  }) {
+    const response = await api.post<ApiSuccess<TimetableSlot>>('/timetable', payload);
+    return getResponseData(response.data);
+  },
+
+  async deleteTimetableSlot(id: number) {
+    const response = await api.delete<ApiSuccess<TimetableSlot>>(`/timetable/${id}`);
+    return getResponseData(response.data);
+  },
+
+  async getAuditLogs(params?: {
+    entityType?: string;
+    entityId?: number;
+    userId?: number;
+    action?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const response = await api.get<ApiSuccess<AuditLogPage>>('/audit-logs', { params });
     return getResponseData(response.data);
   },
 };

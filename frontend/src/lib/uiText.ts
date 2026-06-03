@@ -18,6 +18,13 @@ export const menuLabels = {
   myProfile: 'Hồ sơ cá nhân',
   myScores: 'Điểm của tôi',
   myAssignments: 'Phân công của tôi',
+  auditLogs: 'Nhật ký hệ thống',
+  conductAssessment: 'Đánh giá hạnh kiểm',
+  conductReview: 'Duyệt hạnh kiểm',
+  semesterFinalize: 'Chốt điểm học kỳ',
+  yearEnd: 'Tổng kết năm học',
+  timetable: 'Thời khóa biểu',
+  myTimetable: 'TKB của tôi',
 } as const;
 
 export const appText = {

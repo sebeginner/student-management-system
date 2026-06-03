@@ -8,6 +8,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/types';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService } from '../common/audit-log/audit-log.service';
 import { AssignEnrollmentDto } from './dto/assign-enrollment.dto';
 import { EnrollmentQueryDto } from './dto/enrollment-query.dto';
 import { TransferEnrollmentDto } from './dto/transfer-enrollment.dto';
@@ -40,7 +41,10 @@ type EnrollmentWithClass = Prisma.StudentClassEnrollmentGetPayload<{
 
 @Injectable()
 export class EnrollmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async findAll(query: EnrollmentQueryDto, user: AuthenticatedUser) {
     const where = this.buildAccessibleWhere(query, user);
@@ -74,7 +78,7 @@ export class EnrollmentsService {
     });
   }
 
-  async assign(dto: AssignEnrollmentDto) {
+  async assign(dto: AssignEnrollmentDto, user: AuthenticatedUser) {
     const student = await this.prisma.student.findUnique({
       where: { id: dto.studentId },
     });
@@ -92,8 +96,8 @@ export class EnrollmentsService {
     );
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const enrollment = await tx.studentClassEnrollment.create({
+      const enrollment = await this.prisma.$transaction(async (tx) => {
+        const result = await tx.studentClassEnrollment.create({
           data: {
             studentId: dto.studentId,
             classId: dto.classId,
@@ -110,14 +114,30 @@ export class EnrollmentsService {
           data: { status: 'ACTIVE' },
         });
 
-        return enrollment;
+        return result;
       });
+
+      void this.auditLog.log({
+        userId: user.id,
+        action: 'ASSIGN_CLASS',
+        entityType: 'StudentClassEnrollment',
+        entityId: enrollment?.id,
+        newValue: {
+          studentId: dto.studentId,
+          classId: dto.classId,
+          classCode: enrollment?.class?.classCode,
+          semesterId: dto.semesterId,
+          reason: dto.reason,
+        },
+      });
+
+      return enrollment;
     } catch (error) {
       this.handlePrismaError(error);
     }
   }
 
-  async transfer(dto: TransferEnrollmentDto) {
+  async transfer(dto: TransferEnrollmentDto, user: AuthenticatedUser) {
     const student = await this.prisma.student.findUnique({
       where: { id: dto.studentId },
     });
@@ -154,7 +174,7 @@ export class EnrollmentsService {
     );
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const newEnrollment = await this.prisma.$transaction(async (tx) => {
         await tx.studentClassEnrollment.update({
           where: { id: currentEnrollment.id },
           data: {
@@ -164,7 +184,7 @@ export class EnrollmentsService {
           },
         });
 
-        const newEnrollment = await tx.studentClassEnrollment.create({
+        const result = await tx.studentClassEnrollment.create({
           data: {
             studentId: dto.studentId,
             classId: dto.toClassId,
@@ -178,8 +198,28 @@ export class EnrollmentsService {
         await this.syncClassSize(tx, currentEnrollment.classId, dto.semesterId);
         await this.syncClassSize(tx, dto.toClassId, dto.semesterId);
 
-        return newEnrollment;
+        return result;
       });
+
+      void this.auditLog.log({
+        userId: user.id,
+        action: 'TRANSFER_CLASS',
+        entityType: 'StudentClassEnrollment',
+        entityId: currentEnrollment.id,
+        oldValue: {
+          classId: currentEnrollment.classId,
+          classCode: currentEnrollment.class?.classCode,
+        },
+        newValue: {
+          studentId: dto.studentId,
+          toClassId: dto.toClassId,
+          toClassCode: newEnrollment?.class?.classCode,
+          semesterId: dto.semesterId,
+          reason: dto.reason,
+        },
+      });
+
+      return newEnrollment;
     } catch (error) {
       this.handlePrismaError(error);
     }

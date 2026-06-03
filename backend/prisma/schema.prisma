@@ -66,6 +66,10 @@ model User {
   auditLogs             AuditLog[]
   requestedScoreChanges ScoreChangeRequest[] @relation("RequestedScoreChanges")
   reviewedScoreChanges  ScoreChangeRequest[] @relation("ReviewedScoreChanges")
+  semesterResultsFinalized SemesterStudentResult[]
+  yearEndResultsFinalized  YearEndResult[]
+  conductSubmitted         ConductAssessment[]     @relation("ConductSubmitted")
+  conductReviewed          ConductAssessment[]     @relation("ConductReviewed")
 
   @@map("users")
 }
@@ -85,9 +89,12 @@ model Student {
   status        String   @default("ACTIVE")
   note          String?
 
-  user          User?
-  enrollments   StudentClassEnrollment[]
-  subjectScores StudentSubjectScore[]
+  user                   User?
+  enrollments            StudentClassEnrollment[]
+  subjectScores          StudentSubjectScore[]
+  semesterResults        SemesterStudentResult[]
+  yearEndResults         YearEndResult[]
+  conductAssessments     ConductAssessment[]
 
   @@map("students")
 }
@@ -101,10 +108,11 @@ model Teacher {
   subjectId   Int     @map("subject_id")
   status      String  @default("ACTIVE")
 
-  subject     Subject             @relation(fields: [subjectId], references: [id])
-  user        User?
-  classes     Class[]             @relation("HomeroomTeacher")
-  assignments TeacherAssignment[]
+  subject          Subject             @relation(fields: [subjectId], references: [id])
+  user             User?
+  classes          Class[]             @relation("HomeroomTeacher")
+  assignments      TeacherAssignment[]
+  timetableSlots   TimetableSlot[]
 
   @@map("teachers")
 }
@@ -118,11 +126,12 @@ model SchoolYear {
   endDate   DateTime @map("end_date")
   isActive  Boolean  @default(false) @map("is_active")
 
-  semesters    Semester[]
-  classes      Class[]
-  assignments  TeacherAssignment[]
-  systemParams SystemParameter[]
-  scoreWeights ScoreWeight[]
+  semesters       Semester[]
+  classes         Class[]
+  assignments     TeacherAssignment[]
+  systemParams    SystemParameter[]
+  scoreWeights    ScoreWeight[]
+  yearEndResults  YearEndResult[]
 
   @@map("school_years")
 }
@@ -135,12 +144,15 @@ model Semester {
   isActive     Boolean  @default(false) @map("is_active")
   schoolYearId Int      @map("school_year_id")
 
-  schoolYear     SchoolYear               @relation(fields: [schoolYearId], references: [id])
-  enrollments    StudentClassEnrollment[]
-  assignments    TeacherAssignment[]
-  scoreSheets    ScoreSheet[]
-  reports        SemesterReport[]
-  subjectReports SubjectReport[]
+  schoolYear              SchoolYear               @relation(fields: [schoolYearId], references: [id])
+  enrollments             StudentClassEnrollment[]
+  assignments             TeacherAssignment[]
+  scoreSheets             ScoreSheet[]
+  reports                 SemesterReport[]
+  subjectReports          SubjectReport[]
+  semesterStudentResults  SemesterStudentResult[]
+  conductAssessments      ConductAssessment[]
+  timetableSlots          TimetableSlot[]
 
   @@unique([schoolYearId, name])
   @@map("semesters")
@@ -172,11 +184,15 @@ model Class {
   schoolYear      SchoolYear @relation(fields: [schoolYearId], references: [id])
   homeroomTeacher Teacher?   @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
 
-  enrollments        StudentClassEnrollment[]
-  assignments        TeacherAssignment[]
-  scoreSheets        ScoreSheet[]
-  subjectRepDetails  SubjectReportDetail[]
-  semesterRepDetails SemesterReportDetail[]
+  enrollments             StudentClassEnrollment[]
+  assignments             TeacherAssignment[]
+  scoreSheets             ScoreSheet[]
+  subjectRepDetails       SubjectReportDetail[]
+  semesterRepDetails      SemesterReportDetail[]
+  semesterStudentResults  SemesterStudentResult[]
+  yearEndResults          YearEndResult[]
+  conductAssessments      ConductAssessment[]
+  timetableSlots          TimetableSlot[]
 
   @@unique([schoolYearId, name])
   @@map("classes")
@@ -210,10 +226,11 @@ model Subject {
   description String?
   isActive    Boolean @default(true) @map("is_active")
 
-  teachers    Teacher[]
-  assignments TeacherAssignment[]
-  scoreSheets ScoreSheet[]
-  reports     SubjectReport[]
+  teachers       Teacher[]
+  assignments    TeacherAssignment[]
+  scoreSheets    ScoreSheet[]
+  reports        SubjectReport[]
+  timetableSlots TimetableSlot[]
 
   @@map("subjects")
 }
@@ -436,6 +453,121 @@ model SystemParameter {
   @@map("system_parameters")
 }
 
+// ==========================================
+// NHÓM 6: KẾT QUẢ HỌC KỲ & TỔNG KẾT NĂM (UC2)
+// ==========================================
+model SemesterStudentResult {
+  id                 Int      @id @default(autoincrement())
+  studentId          Int      @map("student_id")
+  semesterId         Int      @map("semester_id")
+  classId            Int      @map("class_id")
+  semesterAverage    Float    @map("semester_average")
+  academicRating     String   @map("academic_rating") // EXCELLENT|GOOD|AVERAGE|WEAK|POOR
+  subjectCount       Int      @map("subject_count")
+  failedSubjectCount Int      @map("failed_subject_count")
+  finalizedAt        DateTime @map("finalized_at")
+  finalizedById      Int      @map("finalized_by_id")
+
+  student     Student  @relation(fields: [studentId], references: [id])
+  semester    Semester @relation(fields: [semesterId], references: [id])
+  class       Class    @relation(fields: [classId], references: [id])
+  finalizedBy User     @relation(fields: [finalizedById], references: [id])
+
+  @@unique([studentId, semesterId])
+  @@map("semester_student_results")
+}
+
+model YearEndResult {
+  id             Int      @id @default(autoincrement())
+  studentId      Int      @map("student_id")
+  schoolYearId   Int      @map("school_year_id")
+  classId        Int      @map("class_id")
+  hk1Average     Float    @map("hk1_average")
+  hk2Average     Float    @map("hk2_average")
+  yearAverage    Float    @map("year_average")
+  academicRating String   @map("academic_rating")
+  conductRating  String?  @map("conduct_rating")
+  decision       String   // ADVANCE|REMEDIAL|CONDUCT_REVIEW|RETAIN
+  decisionNote   String?  @map("decision_note")
+  generatedAt    DateTime @default(now()) @map("generated_at")
+  finalizedById  Int      @map("finalized_by_id")
+
+  student     Student    @relation(fields: [studentId], references: [id])
+  schoolYear  SchoolYear @relation(fields: [schoolYearId], references: [id])
+  class       Class      @relation(fields: [classId], references: [id])
+  finalizedBy User       @relation(fields: [finalizedById], references: [id])
+
+  @@unique([studentId, schoolYearId])
+  @@map("year_end_results")
+}
+
+// ==========================================
+// NHÓM 7: HẠNH KIỂM (UC1)
+// ==========================================
+model ConductAssessment {
+  id            Int       @id @default(autoincrement())
+  studentId     Int       @map("student_id")
+  semesterId    Int       @map("semester_id")
+  classId       Int       @map("class_id")
+  status        String    @default("DRAFT") // DRAFT|SUBMITTED|FINALIZED
+  finalRating   String?   @map("final_rating") // EXCELLENT|GOOD|AVERAGE|WEAK
+  teacherNote   String?   @map("teacher_note") @db.Text
+  reviewNote    String?   @map("review_note") @db.Text
+  submittedById Int       @map("submitted_by_id")
+  reviewedById  Int?      @map("reviewed_by_id")
+  reviewedAt    DateTime? @map("reviewed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  student      Student          @relation(fields: [studentId], references: [id])
+  semester     Semester         @relation(fields: [semesterId], references: [id])
+  class        Class            @relation(fields: [classId], references: [id])
+  submittedBy  User             @relation("ConductSubmitted", fields: [submittedById], references: [id])
+  reviewedBy   User?            @relation("ConductReviewed", fields: [reviewedById], references: [id])
+  criteria     ConductCriterion[]
+
+  @@unique([studentId, semesterId])
+  @@map("conduct_assessments")
+}
+
+model ConductCriterion {
+  id           Int    @id @default(autoincrement())
+  assessmentId Int    @map("assessment_id")
+  code         String // ATTENDANCE|DISCIPLINE|ACADEMIC|ACTIVITIES
+  rating       String // EXCELLENT|GOOD|AVERAGE|WEAK
+  note         String? @db.Text
+
+  assessment ConductAssessment @relation(fields: [assessmentId], references: [id])
+
+  @@map("conduct_criteria")
+}
+
+// ==========================================
+// NHÓM 8: THỜI KHÓA BIỂU (UC5)
+// ==========================================
+model TimetableSlot {
+  id         Int     @id @default(autoincrement())
+  semesterId Int     @map("semester_id")
+  classId    Int     @map("class_id")
+  subjectId  Int     @map("subject_id")
+  teacherId  Int     @map("teacher_id")
+  dayOfWeek  Int     @map("day_of_week") // 1=T2 ... 6=T7
+  period     Int     // 1–5 (tiết học)
+  room       String?
+  isActive   Boolean @default(true) @map("is_active")
+
+  semester Semester @relation(fields: [semesterId], references: [id])
+  class    Class    @relation(fields: [classId], references: [id])
+  subject  Subject  @relation(fields: [subjectId], references: [id])
+  teacher  Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@unique([semesterId, classId, dayOfWeek, period], name: "unique_class_slot")
+  @@unique([semesterId, teacherId, dayOfWeek, period], name: "unique_teacher_slot")
+  @@map("timetable_slots")
+}
+
+// ==========================================
+// NHÓM HIỆN CÓ: AUDIT LOG
+// ==========================================
 model AuditLog {
   id         Int      @id @default(autoincrement())
   userId     Int?     @map("user_id")

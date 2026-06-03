@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/types';
 import { PermissionScopeService } from '../authorization/permission-scope.service';
+import { AuditLogService } from '../common/audit-log/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
@@ -46,6 +47,7 @@ export class StudentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionScope: PermissionScopeService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async findAll(query: StudentQueryDto, user: AuthenticatedUser) {
@@ -73,11 +75,11 @@ export class StudentsService {
     return student;
   }
 
-  async create(dto: CreateStudentDto) {
+  async create(dto: CreateStudentDto, userId: number) {
     await this.validateStudentInput(dto);
 
     try {
-      return await this.prisma.student.create({
+      const student = await this.prisma.student.create({
         data: {
           studentCode: dto.studentCode,
           fullName: dto.fullName,
@@ -91,12 +93,22 @@ export class StudentsService {
         },
         include: STUDENT_INCLUDE,
       });
+
+      void this.auditLog.log({
+        userId,
+        action: 'CREATE_STUDENT',
+        entityType: 'Student',
+        entityId: student.id,
+        newValue: { studentCode: student.studentCode, fullName: student.fullName },
+      });
+
+      return student;
     } catch (error) {
       this.handlePrismaError(error);
     }
   }
 
-  async update(id: number, dto: UpdateStudentDto) {
+  async update(id: number, dto: UpdateStudentDto, userId: number) {
     const current = await this.prisma.student.findUnique({ where: { id } });
     if (!current) {
       throw this.notFound();
@@ -105,7 +117,7 @@ export class StudentsService {
     await this.validateStudentInput(dto, id, current);
 
     try {
-      return await this.prisma.student.update({
+      const student = await this.prisma.student.update({
         where: { id },
         data: {
           studentCode: dto.studentCode,
@@ -122,6 +134,17 @@ export class StudentsService {
         },
         include: STUDENT_INCLUDE,
       });
+
+      void this.auditLog.log({
+        userId,
+        action: 'UPDATE_STUDENT',
+        entityType: 'Student',
+        entityId: id,
+        oldValue: { fullName: current.fullName, status: current.status },
+        newValue: { fullName: dto.fullName ?? current.fullName, status: dto.status ?? current.status },
+      });
+
+      return student;
     } catch (error) {
       this.handlePrismaError(error);
     }

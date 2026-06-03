@@ -8,7 +8,9 @@ import { DashboardPage } from '../pages/DashboardPage';
 import { ScoreChangeRequestsPage } from '../pages/score-change-requests/ScoreChangeRequestsPage';
 import { ClassReportPage } from '../pages/reports/ClassReportPage';
 import { ReportsPage } from '../pages/reports/ReportsPage';
+import { SemesterFinalizePage } from '../pages/reports/SemesterFinalizePage';
 import { SubjectReportPage } from '../pages/reports/SubjectReportPage';
+import { YearEndPage } from '../pages/reports/YearEndPage';
 import { ScoreEntryPage } from '../pages/scores/ScoreEntryPage';
 import { ScoreSheetsPage } from '../pages/scores/ScoreSheetsPage';
 import { StudentsPage } from '../pages/students/StudentsPage';
@@ -20,6 +22,11 @@ import { TeachersPage } from '../pages/teachers/TeachersPage';
 import { ParametersPage } from '../pages/parameters/ParametersPage';
 import { UsersPage } from '../pages/admin/UsersPage';
 import { RolesPage } from '../pages/admin/RolesPage';
+import { AuditLogPage } from '../pages/admin/AuditLogPage';
+import { ConductAssessmentPage } from '../pages/conduct/ConductAssessmentPage';
+import { ConductReviewPage } from '../pages/conduct/ConductReviewPage';
+import { TimetablePage } from '../pages/timetable/TimetablePage';
+import { MyTimetablePage } from '../pages/timetable/MyTimetablePage';
 import { ProtectedRoute } from './ProtectedRoute';
 
 export const AppRouter = () => {
@@ -33,6 +40,19 @@ export const AppRouter = () => {
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="users" element={<UsersPage />} />
             <Route path="roles" element={<RolesPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'ACADEMIC_STAFF']} />}>
+            <Route path="audit-logs" element={<AuditLogPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['TEACHER']} />}>
+            <Route path="conduct-assessment" element={<ConductAssessmentPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']} />}>
+            <Route path="conduct-review" element={<ConductReviewPage />} />
+            <Route path="timetable" element={<TimetablePage />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['TEACHER', 'STUDENT']} />}>
+            <Route path="my-timetable" element={<MyTimetablePage />} />
           </Route>
           <Route
             element={
@@ -101,6 +121,8 @@ export const AppRouter = () => {
             }
           >
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="semester-finalize" element={<SemesterFinalizePage />} />
+            <Route path="year-end" element={<YearEndPage />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['TEACHER']} />}>
             <Route

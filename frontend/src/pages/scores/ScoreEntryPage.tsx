@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ImportExcelModal } from '../../components/ImportExcelModal';
 import {
   academicApi,
   type ClassStudentRow,
@@ -111,6 +112,7 @@ export const ScoreEntryPage = () => {
   const [savingStudentId, setSavingStudentId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [requestStudentScore, setRequestStudentScore] =
     useState<StudentSubjectScore | null>(null);
 
@@ -334,6 +336,23 @@ export const ScoreEntryPage = () => {
                 {isSubmitting ? 'Đang nộp...' : 'Nộp bảng điểm'}
               </button>
             ) : null}
+
+            {!isLocked ? (
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Import Excel
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void academicApi.downloadScoreSheetPdf(sheet.id)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Tải PDF
+            </button>
           </div>
         </div>
       </div>
@@ -510,6 +529,16 @@ export const ScoreEntryPage = () => {
           studentScore={requestStudentScore}
           onClose={() => setRequestStudentScore(null)}
           onCreated={loadSheet}
+        />
+      ) : null}
+      {showImportModal && sheet ? (
+        <ImportExcelModal
+          title={`Import điểm – ${sheet.subject?.name ?? ''}`}
+          description="Upload file Excel có các cột: Mã HS, Miệng, 1 tiết, Giữa kỳ, Cuối kỳ."
+          onClose={() => { setShowImportModal(false); void loadSheet(); }}
+          onDownloadTemplate={() => academicApi.downloadScoreSheetTemplate(sheet.id)}
+          onPreview={(file) => academicApi.previewScoreImport(sheet.id, file)}
+          onCommit={(rows) => academicApi.commitScoreImport(sheet.id, rows).then(() => undefined)}
         />
       ) : null}
     </section>

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuditLogModule } from './common/audit-log/audit-log.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -18,10 +20,16 @@ import { TeacherAssignmentsModule } from './teacher-assignments/teacher-assignme
 import { ScoresModule } from './scores/scores.module';
 import { ScoreChangeRequestsModule } from './score-change-requests/score-change-requests.module';
 import { ReportsModule } from './reports/reports.module';
+import { ConductAssessmentsModule } from './conduct-assessments/conduct-assessments.module';
+import { TimetableModule } from './timetable/timetable.module';
+import { SemesterResultsModule } from './semester-results/semester-results.module';
+import { ImportModule } from './import/import.module';
 
 @Module({
   imports: [
     PrismaModule,
+    AuditLogModule,
+    AuditLogsModule,
     UsersModule,
     AuthModule,
     AcademicYearsModule,
@@ -38,6 +46,10 @@ import { ReportsModule } from './reports/reports.module';
     ScoresModule,
     ScoreChangeRequestsModule,
     ReportsModule,
+    SemesterResultsModule,
+    ConductAssessmentsModule,
+    TimetableModule,
+    ImportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { academicApi, type MyStudentScore } from '../../lib/academic-api';
+import { useAuthStore } from '../../lib/auth-store';
 import { useToastStore } from '../../lib/toast-store';
 import { menuLabels } from '../../lib/uiText';
 import { assessmentColumns, scoreDetailKey } from '../scores/score-utils';
@@ -15,6 +16,7 @@ const detailValue = (score: MyStudentScore, code: string, attemptNo = 1) => {
 
 export const MyScoresPage = () => {
   const showToast = useToastStore((state) => state.showToast);
+  const user = useAuthStore((s) => s.user);
   const [scores, setScores] = useState<MyStudentScore[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,13 +39,32 @@ export const MyScoresPage = () => {
 
   return (
     <section className="space-y-5">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">
-          {menuLabels.myScores}
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Điểm được tải từ tài khoản học sinh đang đăng nhập.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-900">
+            {menuLabels.myScores}
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Điểm được tải từ tài khoản học sinh đang đăng nhập.
+          </p>
+        </div>
+        {user?.studentId && scores.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {[...new Set(scores.map(s => s.scoreSheet.semesterId))].map(semId => {
+              const sem = scores.find(s => s.scoreSheet.semesterId === semId)?.scoreSheet.semester;
+              return (
+                <button
+                  key={semId}
+                  type="button"
+                  onClick={() => void academicApi.downloadStudentTranscriptPdf(user.studentId!, semId)}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  PDF {sem?.name}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       <div className="overflow-x-auto rounded border border-slate-200 bg-white">

@@ -7,8 +7,10 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../auth/types';
 import { successResponse } from '../common/api-response';
@@ -20,13 +22,17 @@ import { CreateScoreSheetDto } from './dto/create-score-sheet.dto';
 import { ScoreSheetQueryDto } from './dto/score-sheet-query.dto';
 import { UpdateStudentScoreDto } from './dto/update-student-score.dto';
 import { ScoresService } from './scores.service';
+import { PdfService } from '../reports/pdf.service';
 
 @ApiTags('Scores')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('scores')
 export class ScoresController {
-  constructor(private readonly scoresService: ScoresService) {}
+  constructor(
+    private readonly scoresService: ScoresService,
+    private readonly pdfService: PdfService,
+  ) {}
 
   @Get('sheets')
   @ApiOperation({ summary: 'List score sheets' })
@@ -122,5 +128,21 @@ export class ScoresController {
   @Roles('STUDENT')
   async getMyScores(@CurrentUser() user: AuthenticatedUser) {
     return successResponse(await this.scoresService.getMyScores(user));
+  }
+
+  @Get('sheets/:id/pdf')
+  @ApiOperation({ summary: 'Export score sheet as PDF' })
+  @Roles('ADMIN', 'ACADEMIC_STAFF', 'TEACHER')
+  async exportSheetPdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.pdfService.generateScoreSheetPdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="bang-diem-${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
   }
 }

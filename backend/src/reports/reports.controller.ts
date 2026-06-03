@@ -4,8 +4,10 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../auth/types';
 import { successResponse } from '../common/api-response';
@@ -20,13 +22,17 @@ import {
   SubjectSummaryReportQueryDto,
 } from './dto/report-query.dto';
 import { ReportsService } from './reports.service';
+import { PdfService } from './pdf.service';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly pdfService: PdfService,
+  ) {}
 
   @Get('class-semester')
   @ApiOperation({ summary: 'Get class semester report' })
@@ -79,5 +85,24 @@ export class ReportsController {
     return successResponse(
       await this.reportsService.getDashboardSummary(query, user),
     );
+  }
+
+  @Get('student-transcript/:studentId/pdf')
+  @Roles('ADMIN', 'ACADEMIC_STAFF', 'TEACHER', 'STUDENT')
+  async getStudentTranscriptPdf(
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @Query('semesterId') semesterId: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.pdfService.generateStudentTranscriptPdf(
+      studentId,
+      Number(semesterId),
+    );
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="phieu-diem-${studentId}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
   }
 }

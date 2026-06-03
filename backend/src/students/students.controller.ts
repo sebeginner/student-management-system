@@ -41,8 +41,11 @@ export class StudentsController {
 
   @Post()
   @Roles('ACADEMIC_STAFF')
-  async create(@Body() dto: CreateStudentDto) {
-    return successResponse(await this.studentsService.create(dto), 'Created');
+  async create(
+    @Body() dto: CreateStudentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return successResponse(await this.studentsService.create(dto, user.id), 'Created');
   }
 
   @Get(':id')
@@ -59,9 +62,10 @@ export class StudentsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStudentDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return successResponse(
-      await this.studentsService.update(id, dto),
+      await this.studentsService.update(id, dto, user.id),
       'Updated',
     );
   }

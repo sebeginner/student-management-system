@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { ImportExcelModal } from '../../components/ImportExcelModal';
 import {
   academicApi,
   type Student,
@@ -46,6 +47,7 @@ export const StudentsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const loadStudents = useCallback(async () => {
     setIsLoading(true);
@@ -126,6 +128,13 @@ export const StudentsPage = () => {
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Thêm học sinh
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Import Excel
             </button>
           ) : null}
         </div>
@@ -287,6 +296,16 @@ export const StudentsPage = () => {
             />
           </div>
         </div>
+      ) : null}
+      {showImportModal ? (
+        <ImportExcelModal
+          title="Import học sinh từ Excel"
+          description="Tải file mẫu, điền dữ liệu rồi upload để xem trước và xác nhận."
+          onClose={() => { setShowImportModal(false); void loadStudents(); }}
+          onDownloadTemplate={() => academicApi.downloadStudentTemplate()}
+          onPreview={(file) => academicApi.previewStudentImport(file)}
+          onCommit={(rows) => academicApi.commitStudentImport(rows).then(() => undefined)}
+        />
       ) : null}
     </section>
   );
