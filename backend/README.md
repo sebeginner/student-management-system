@@ -1,37 +1,32 @@
-# Student Management System Backend
+# Student Management System — Backend SE104
 
-NestJS + Prisma + PostgreSQL backend for the SE104 high school student management demo.
+NestJS + Prisma + PostgreSQL backend cho hệ thống quản lý học sinh cấp 3.
 
-## Requirements
+## Stack
 
-- Node.js
-- PostgreSQL
-- npm
+- NestJS + TypeScript
+- Prisma ORM + PostgreSQL
+- JWT (Passport)
+- Swagger/OpenAPI (`http://localhost:3000/api`)
+- bcrypt (hash password)
 
-## Setup
-
-Install dependencies:
+## Cài đặt
 
 ```bash
 npm install
+cp .env.example .env
 ```
 
-Create environment file:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Update `.env` with your local PostgreSQL connection and JWT settings:
+Cập nhật `.env`:
 
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/student_management_system?schema=public"
-JWT_SECRET="change-me"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/student_management?schema=public"
+JWT_SECRET="replace-me-please-change-this"
 JWT_EXPIRES_IN="8h"
 PORT=3000
 ```
 
-Generate Prisma Client, run migrations, then seed demo data:
+Generate Prisma Client, chạy migration, seed:
 
 ```bash
 npx prisma generate
@@ -39,66 +34,95 @@ npx prisma migrate deploy
 npm run prisma:seed
 ```
 
-For a local clean reset during demo preparation:
+Reset sạch để demo:
 
 ```bash
 npx prisma migrate reset --force
 npm run prisma:seed
 ```
 
-Start the backend:
+Khởi động:
 
 ```bash
 npm run start:dev
 ```
 
-Start the frontend in a second terminal:
-
-```bash
-cd ../frontend
-npm install
-Copy-Item .env.example .env
-npm run dev
-```
-
-Frontend runs at `http://localhost:5173` and uses
-`VITE_API_BASE_URL=http://localhost:3000/api/v1` by default.
-
-## URLs
-
-- API base URL: `http://localhost:3000/api/v1`
+- API: `http://localhost:3000/api/v1`
 - Swagger UI: `http://localhost:3000/api`
 
-## Demo accounts
+## Tài khoản demo
 
-| Role | Username | Password |
-|---|---|---|
-| Admin | `admin` | `Admin@123` |
-| Giao vu | `giaovu01` | `Staff@123` |
-| Manager/BGH | `manager01` | `Manager@123` |
-| Teacher | `teacher01` | `Teacher@123` |
-| Teacher | `teacher02` | `Teacher@123` |
-| Student | `student01` to `student05` | `Student@123` |
+| Vai trò | Username | Password | Ghi chú |
+|---|---|---|---|
+| Admin | `admin` | `Admin@123` | Quản lý tài khoản, role, tham số |
+| Giáo vụ | `giaovu01` | `Staff@123` | Toàn quyền nghiệp vụ học vụ |
+| Ban giám hiệu | `manager01` | `Manager@123` | Chỉ xem báo cáo |
+| GVCN 10A1 + GVBM Toán | `teacher01` | `Teacher@123` | Nguyễn Tuấn An — dạy Toán 10A1, 10A2 |
+| GVCN 10A2 + GVBM Văn | `teacher02` | `Teacher@123` | Trần Thị Bích Ngọc — dạy Văn 10A1, 10A2 |
+| GVCN 11A1 + GVBM Anh | `teacher03` | `Teacher@123` | Lê Văn Cường — dạy Anh 10A1, 11A1 |
+| GVCN 12A1 + GVBM Vật lý | `teacher04` | `Teacher@123` | Phạm Thị Duyên — dạy VL 10A1, 11A1, 12A1 |
+| GVBM Hóa học | `teacher05` | `Teacher@123` | Hoàng Minh Đức — dạy Hóa 10A1, 10A2 |
+| Học sinh | `student01`–`student05` | `Student@123` | Lớp 10A1 |
+| Học sinh | `student07` | `Student@123` | Lớp 10A2 |
+| Học sinh (chờ lớp) | `student06` | `Student@123` | Đỗ Ngọc Lan — chưa phân lớp |
 
-Seed data includes school year `2025-2026`, semesters `HK1/HK2`, classes `10A1`, `10A2`, `11A1`, subjects `Toan/Van`, teacher assignments, seven students, sample score sheets, and system parameters. `student06` is pending class assignment and `student07` is already in `10A2`.
+> GVCN/GVBM không phải role riêng — đều là `TEACHER`. Vai trò được xác định qua `TeacherAssignment.assignmentType`.
 
-## Final demo flow
+## Seed data
 
-1. Login `giaovu01` and view students/classes. Confirm students are in `10A1`.
-2. Confirm `teacher01` is homeroom teacher of `10A1` and subject teacher for `Toan 10A1 HK1`.
-3. Login `teacher01`, enter Toan scores for `10A1`, then submit the score sheet.
-4. Login `giaovu01`, lock the submitted Toan score sheet.
-5. Login `teacher01`, create a score change request after the sheet is locked.
-6. Login `giaovu01`, approve the score change request.
-7. Login `student01`, view personal scores.
-8. Login `manager01`, view reports.
+- **Năm học:** `2025-2026` (isActive=true)
+- **HK1:** 01/09/2025–15/01/2026 (completed)
+- **HK2:** 16/01/2026–30/05/2026 (active)
+- **Lớp:** 10A1(20hs), 10A2(15hs), 11A1(15hs), 11A2(12hs), 12A1(8hs) + 3 hs chờ phân lớp
+- **Môn:** Toán, Ngữ văn, Tiếng Anh, Vật lý, Hóa học
+- **Bảng điểm HK1:** LOCKED/SUBMITTED/DRAFT (xem seed.ts để biết chi tiết)
+- **Bảng điểm HK2:** Toán/10A1 (DRAFT 10/20), Văn/10A1 (DRAFT 8/20)
+- **SCR:** 1 PENDING (Toán/HK1/S003), 1 APPROVED (Văn/HK1/S001)
+- **Hạnh kiểm:** 5 FINALIZED + 3 SUBMITTED (lớp 10A1 HK1)
+- **Thời khóa biểu:** 11 tiết lớp 10A1 HK2
 
-The detailed presentation script is in `../docs/final-demo-script.md`.
+## Modules backend
 
-## Verification
+```
+src/
+  auth/                  — Đăng nhập, JWT, Guards
+  users/                 — Quản lý tài khoản (ADMIN only)
+  students/              — Hồ sơ học sinh
+  teachers/              — Hồ sơ giáo viên
+  academic-years/        — Năm học
+  semesters/             — Học kỳ
+  grade-levels/          — Khối lớp
+  classes/               — Lớp học
+  subjects/              — Môn học
+  enrollments/           — Phân lớp, chuyển lớp
+  teacher-assignments/   — Phân công GVCN/GVBM
+  system-parameters/     — Tham số hệ thống
+  scores/                — Bảng điểm, nhập điểm, lock, PDF
+  score-change-requests/ — Yêu cầu sửa điểm
+  reports/               — Báo cáo môn, học kỳ, dashboard, PDF
+  semester-results/      — Chốt kết quả HK + tổng kết năm
+  conduct-assessments/   — Hạnh kiểm
+  timetable/             — Thời khóa biểu
+  import/                — Import Excel (học sinh + điểm)
+  audit-logs/            — Nhật ký hệ thống
+  common/                — Guards, decorators, filters, utils
+```
+
+## Demo flow ngắn
+
+1. `giaovu01`: xem học sinh, lớp, phân công GV.
+2. `giaovu01`: khóa bảng điểm Vật lý/10A1/HK1 (SUBMITTED → LOCKED).
+3. `giaovu01`: duyệt yêu cầu sửa điểm PENDING.
+4. `teacher01`: nhập điểm Toán/10A1/HK2; submit.
+5. `teacher01`: tạo yêu cầu sửa điểm trên bảng LOCKED.
+6. `student01`: xem điểm cá nhân.
+7. `manager01`: xem báo cáo dashboard và tổng kết.
+
+Script thuyết trình chi tiết: `../docs/final-demo-script.md`
+
+## Kiểm tra build
 
 ```bash
 npm run build
 npm test
-npm run test:e2e
 ```
