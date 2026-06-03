@@ -122,20 +122,22 @@ export const StudentsPage = () => {
           </div>
 
           {canManage ? (
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Thêm học sinh
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowImportModal(true)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Import Excel
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Thêm học sinh
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Import Excel
+              </button>
+            </div>
           ) : null}
         </div>
       </div>

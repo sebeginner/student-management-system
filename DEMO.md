@@ -207,6 +207,80 @@ cd backend && npm run prisma:seed
 
 ---
 
+### Vai trò 7 – GVCN nhập hạnh kiểm (`teacher01`)
+
+**UC1 – Hạnh kiểm.** Seed đã tạo 3 đánh giá SUBMITTED chờ duyệt (S101–S103) và 5 đã FINALIZED (S001–S005).
+
+1. Đăng nhập `teacher01` → **Đánh giá hạnh kiểm**
+2. Chọn **HK1** + lớp **10A1** → Nhấn "Tạo đánh giá cho cả lớp" (nếu chưa có)
+3. Nhấn **Chỉnh sửa** một học sinh → chấm 4 tiêu chí (Chuyên cần / Kỷ luật / Học tập / Hoạt động)
+4. Nhấn **Nộp** → trạng thái chuyển SUBMITTED
+5. Đăng nhập `giaovu01` → **Duyệt hạnh kiểm** → thấy 3 bản chờ duyệt
+6. Nhấn **Duyệt & chốt** → chọn xếp loại → lưu → FINALIZED ✓
+
+---
+
+### Luồng UC2 – Chốt điểm & Xét lên lớp
+
+**Seed đã chuẩn bị:** HK1 đã có điểm LOCKED cho 10A1; `SemesterStudentResult` đã được tạo.
+
+1. Đăng nhập `giaovu01` → **Chốt điểm học kỳ**
+2. Chọn năm học **2025-2026** + **HK1** → Nhấn **Chốt kết quả HK**
+   - Hệ thống kiểm tra tất cả bảng điểm đã LOCKED
+   - Tính điểm TB, phân loại học lực (Giỏi/Khá/TB/Yếu/Kém)
+   - Ghi vào `StudentClassEnrollment.semesterAverage`
+3. Xem bảng kết quả: màu xanh = Giỏi/Khá, vàng = Yếu, đỏ = Kém
+4. Sau khi có HK1 + HK2: **Tổng kết năm học** → nhấn "Tổng kết năm học"
+   - Tính TB năm = (HK1×1 + HK2×2)/3
+   - Hiển thị: Lên lớp / Thi lại / Rèn luyện hè / Ở lại theo TT58
+5. Đăng nhập `manager01` → menu **Tổng kết năm** → xem danh sách lên lớp toàn trường
+
+---
+
+### Luồng UC5 – Thời khóa biểu
+
+**Seed đã tạo TKB cho 10A1 HK2** (11 tiết: Toán×3, Văn×2, Anh×2, VL×2, Hóa×1).
+
+1. Đăng nhập `giaovu01` → **Thời khóa biểu** → chọn HK2 + lớp 10A1
+2. Thấy grid T2–T7 × Tiết 1–5 với các môn đã được điền sẵn
+3. Nhấn vào ô trống → chọn môn + GV + phòng → **Lưu**
+4. Thử đặt cùng tiết cho cùng GV → thấy thông báo lỗi trùng lịch ✓
+5. Đăng nhập `student01` → **TKB của tôi** → xem lịch học lớp 10A1 HK2
+
+---
+
+### Luồng UC3 – Xuất PDF
+
+1. Đăng nhập `teacher01` → Tra cứu điểm → mở bảng điểm Toán/10A1/HK1
+2. Nhấn nút **Tải PDF** → file `bang-diem-X.pdf` tải về
+3. Đăng nhập `student01` → **Điểm của tôi** → nhấn nút **PDF HK1**
+   → phiếu kết quả cá nhân kèm học lực + hạnh kiểm
+
+---
+
+### Luồng UC4 – Import Excel
+
+1. Đăng nhập `giaovu01` → **Quản lý học sinh** → nhấn **Import Excel**
+2. Nhấn "Tải file mẫu Excel" → mở file, điền thêm vài học sinh
+3. Upload → hệ thống **preview** từng dòng: hàng hợp lệ (xanh) / hàng lỗi (đỏ, ghi rõ lý do)
+4. Nhấn **Xác nhận import** → học sinh được tạo với trạng thái "Chờ phân lớp"
+5. Để demo lỗi: sửa một dòng có mã HS đã tồn tại → thấy thông báo "Mã HS đã tồn tại"
+
+---
+
+### Luồng UC6 – Nhật ký hệ thống
+
+1. Thực hiện vài thao tác: chuyển lớp học sinh, duyệt hạnh kiểm, import học sinh
+2. Đăng nhập `admin` → **Nhật ký hệ thống**
+3. Thấy danh sách sự kiện với mô tả ngôn ngữ tự nhiên:
+   - "Chuyển lớp: Lớp cũ: 10A1 → Lớp mới: 10A2 – ..."
+   - "Chốt hạnh kiểm: Hạnh kiểm: Khá"
+   - "Thêm học sinh: Học sinh Nguyễn X (HS999) được tạo"
+4. Lọc theo **Loại đối tượng** = "Phân lớp / Chuyển lớp" → chỉ thấy lịch sử chuyển lớp
+5. Lọc theo khoảng ngày → kiểm tra audit trail theo thời gian
+
+---
+
 ### Luồng kết hợp: Quy trình đầy đủ một bảng điểm
 
 ```

@@ -31,14 +31,100 @@ const ENTITY_OPTIONS = [
 
 const PAGE_SIZE = 30;
 
-const tryParseJson = (s: string | null): string => {
-  if (!s) return '-';
-  try {
-    return JSON.stringify(JSON.parse(s), null, 2);
-  } catch {
-    return s;
-  }
+// ─── Render dạng ngôn ngữ tự nhiên ────────────────────────────────────────
+
+const FIELD_LABELS: Record<string, string> = {
+  studentCode: 'Mã HS',
+  fullName: 'Họ tên',
+  status: 'Trạng thái',
+  classCode: 'Lớp',
+  classId: 'ID lớp',
+  toClassCode: 'Lớp mới',
+  fromClassCode: 'Lớp cũ',
+  semesterId: 'HK',
+  reason: 'Lý do',
+  score: 'Điểm',
+  averageScore: 'ĐTB',
+  oldScore: 'Điểm cũ',
+  newScore: 'Điểm mới',
+  finalRating: 'Xếp loại',
+  studentCount: 'Số HS',
+  semesterName: 'Học kỳ',
+  schoolYear: 'Năm học',
+  toClassId: 'ID lớp mới',
+  studentId: 'ID HS',
 };
+
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Đang học',
+  INACTIVE: 'Ngưng học',
+  PENDING_CLASS_ASSIGNMENT: 'Chờ phân lớp',
+  APPROVED: 'Đã duyệt',
+  PENDING: 'Chờ duyệt',
+  REJECTED: 'Từ chối',
+  EXCELLENT: 'Tốt',
+  GOOD: 'Khá',
+  AVERAGE: 'Trung bình',
+  WEAK: 'Yếu',
+  POOR: 'Kém',
+};
+
+function renderValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  const str = String(value);
+  if (key === 'status' || key === 'finalRating' || key === 'academicRating') {
+    return STATUS_LABELS[str] ?? str;
+  }
+  return str;
+}
+
+function renderNatural(raw: string | null, action: string): string {
+  if (!raw) return '';
+  let obj: Record<string, unknown>;
+  try { obj = JSON.parse(raw) as Record<string, unknown>; } catch { return raw; }
+
+  // Custom human-readable format per action
+  if (action === 'ASSIGN_CLASS') {
+    return `Phân vào lớp ${obj.classCode ?? obj.classId ?? '?'}${obj.semesterId ? ` (HK ${obj.semesterId})` : ''}${obj.reason ? ` – ${obj.reason}` : ''}`;
+  }
+  if (action === 'TRANSFER_CLASS') {
+    const isOld = 'classCode' in obj && !('toClassCode' in obj);
+    if (isOld) return `Lớp cũ: ${obj.classCode ?? obj.classId ?? '?'}`;
+    return `Lớp mới: ${obj.toClassCode ?? obj.toClassId ?? '?'}${obj.reason ? ` – ${obj.reason}` : ''}`;
+  }
+  if (action === 'CREATE_STUDENT') {
+    return `Học sinh ${obj.fullName ?? ''} (${obj.studentCode ?? ''}) được tạo`;
+  }
+  if (action === 'UPDATE_STUDENT') {
+    const parts: string[] = [];
+    if (obj.fullName) parts.push(`Họ tên: ${obj.fullName}`);
+    if (obj.status) parts.push(`Trạng thái: ${STATUS_LABELS[obj.status as string] ?? obj.status}`);
+    return parts.length ? parts.join(' · ') : 'Cập nhật hồ sơ';
+  }
+  if (action === 'FINALIZE_CONDUCT') {
+    const xepLoai = obj.finalRating ? (STATUS_LABELS[obj.finalRating as string] ?? obj.finalRating) : '';
+    return `Hạnh kiểm: ${xepLoai}`;
+  }
+  if (action === 'FINALIZE_SEMESTER') {
+    return `Chốt ${obj.semesterName ?? ''} – ${obj.studentCount ?? 0} học sinh`;
+  }
+  if (action === 'GENERATE_YEAR_END') {
+    return `Tổng kết năm ${obj.schoolYear ?? ''} – ${obj.studentCount ?? 0} học sinh`;
+  }
+  if (action === 'APPROVE_SCORE_CHANGE_REQUEST') {
+    const pts: string[] = [];
+    if (obj.score !== undefined) pts.push(`Điểm cũ: ${obj.score}`);
+    if (obj.newScore !== undefined) pts.push(`Điểm mới: ${obj.newScore}`);
+    if (obj.averageScore !== undefined) pts.push(`ĐTB mới: ${obj.averageScore}`);
+    return pts.join(' · ') || 'Duyệt sửa điểm';
+  }
+
+  // Fallback: render key-value pairs in Vietnamese
+  return Object.entries(obj)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `${FIELD_LABELS[k] ?? k}: ${renderValue(k, v)}`)
+    .join(' · ');
+}
 
 export const AuditLogPage = () => {
   const showToast = useToastStore((state) => state.showToast);
@@ -211,17 +297,17 @@ export const AuditLogPage = () => {
                   {expandedId === item.id && (
                     <tr key={`${item.id}-detail`} className="bg-slate-50">
                       <td colSpan={5} className="px-4 py-3">
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="flex flex-col gap-2">
                           {item.oldValue ? (
-                            <div>
-                              <div className="mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">Trước</div>
-                              <pre className="overflow-auto rounded bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">{tryParseJson(item.oldValue)}</pre>
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 shrink-0 rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-xs font-semibold text-rose-600">Trước</span>
+                              <span className="text-sm text-slate-700">{renderNatural(item.oldValue, item.action)}</span>
                             </div>
                           ) : null}
                           {item.newValue ? (
-                            <div>
-                              <div className="mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">Sau</div>
-                              <pre className="overflow-auto rounded bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">{tryParseJson(item.newValue)}</pre>
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 shrink-0 rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-600">Sau</span>
+                              <span className="text-sm text-slate-700">{renderNatural(item.newValue, item.action)}</span>
                             </div>
                           ) : null}
                         </div>

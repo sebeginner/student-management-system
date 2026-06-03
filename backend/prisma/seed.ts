@@ -546,6 +546,181 @@ async function main() {
     }
   }
 
+  // ── 15. Hạnh kiểm demo (UC1) ──────────────────────────────────
+  // Seed conduct assessments cho lớp 10A1 HK1 – 5 HS đầu: FINALIZED
+  // để UC2 có thể đọc hạnh kiểm khi tổng kết năm
+  const conductStudents = ['S001','S002','S003','S004','S005'];
+  const conductRatings: Record<string,string> = {
+    S001:'GOOD', S002:'EXCELLENT', S003:'AVERAGE', S004:'GOOD', S005:'AVERAGE',
+  };
+  const criterionCodes = ['ATTENDANCE','DISCIPLINE','ACADEMIC','ACTIVITIES'];
+
+  for (const code of conductStudents) {
+    const s = studentMap.get(code);
+    if (!s) continue;
+    const rating = conductRatings[code] ?? 'AVERAGE';
+
+    const existing = await prisma.conductAssessment.findUnique({
+      where: { studentId_semesterId: { studentId: s.id, semesterId: hk1.id } },
+    });
+
+    const assessment = existing ?? await prisma.conductAssessment.create({
+      data: {
+        studentId: s.id,
+        semesterId: hk1.id,
+        classId: classMap.get('10A1')!.id,
+        status: 'DRAFT',
+        submittedById: (await prisma.user.findUnique({ where: { username:'teacher01' } }))!.id,
+      },
+    });
+
+    // Upsert criteria
+    for (const crit of criterionCodes) {
+      const critRating = crit === 'ACADEMIC' && code === 'S005' ? 'AVERAGE' : rating;
+      const existingCrit = await prisma.conductCriterion.findFirst({
+        where: { assessmentId: assessment.id, code: crit },
+      });
+      if (!existingCrit) {
+        await prisma.conductCriterion.create({
+          data: { assessmentId: assessment.id, code: crit, rating: critRating },
+        });
+      }
+    }
+
+    // Finalize
+    if (assessment.status !== 'FINALIZED') {
+      await prisma.conductAssessment.update({
+        where: { id: assessment.id },
+        data: {
+          status: 'FINALIZED',
+          finalRating: rating,
+          reviewedById: staffUser.id,
+          reviewedAt: t(40),
+          reviewNote: 'Đã xét duyệt cuối học kỳ.',
+        },
+      });
+    }
+  }
+
+  // 5 HS lớp 10A1: submitted chờ duyệt (demo cho giáo vụ)
+  const pendingConductCodes = ['S101','S102','S103'];
+  const teacher01User = await prisma.user.findUnique({ where: { username:'teacher01' } });
+  for (const code of pendingConductCodes) {
+    const s = studentMap.get(code);
+    if (!s || !teacher01User) continue;
+    const existing = await prisma.conductAssessment.findUnique({
+      where: { studentId_semesterId: { studentId: s.id, semesterId: hk1.id } },
+    });
+    if (existing) continue;
+    const assessment = await prisma.conductAssessment.create({
+      data: {
+        studentId: s.id,
+        semesterId: hk1.id,
+        classId: classMap.get('10A1')!.id,
+        status: 'DRAFT',
+        submittedById: teacher01User.id,
+      },
+    });
+    for (const crit of criterionCodes) {
+      await prisma.conductCriterion.create({
+        data: { assessmentId: assessment.id, code: crit, rating: 'GOOD' },
+      });
+    }
+    await prisma.conductAssessment.update({
+      where: { id: assessment.id },
+      data: { status: 'SUBMITTED', finalRating: 'GOOD' },
+    });
+  }
+
+  // ── 16. Chốt kết quả HK1 (UC2) ────────────────────────────────
+  // Tính semesterAverage cho các HS đã có điểm đầy đủ (10A1 HK1 locked)
+  const hk1Enrollments = await prisma.studentClassEnrollment.findMany({
+    where: { semesterId: hk1.id, status: 'ACTIVE', classId: classMap.get('10A1')!.id },
+    select: { id: true, studentId: true, classId: true },
+  });
+
+  for (const enr of hk1Enrollments) {
+    const scores = await prisma.studentSubjectScore.findMany({
+      where: {
+        studentId: enr.studentId,
+        scoreSheet: { semesterId: hk1.id, classId: enr.classId },
+        averageScore: { not: null },
+      },
+      select: { averageScore: true },
+    });
+    if (scores.length === 0) continue;
+
+    const avgs = scores.map(s => s.averageScore!);
+    const semAvg = Math.round(avgs.reduce((a,b) => a+b, 0) / avgs.length * 100) / 100;
+    const minAvg = Math.min(...avgs);
+    let rating = 'AVERAGE';
+    if (semAvg >= 8.0 && minAvg >= 6.5) rating = 'EXCELLENT';
+    else if (semAvg >= 6.5 && minAvg >= 5.0) rating = 'GOOD';
+    else if (semAvg >= 5.0 && minAvg >= 3.5) rating = 'AVERAGE';
+    else if (semAvg >= 3.5 && minAvg >= 2.0) rating = 'WEAK';
+    else rating = 'POOR';
+
+    const failedCount = avgs.filter(a => a < 5.0).length;
+
+    await prisma.semesterStudentResult.upsert({
+      where: { studentId_semesterId: { studentId: enr.studentId, semesterId: hk1.id } },
+      update: { semesterAverage: semAvg, academicRating: rating, subjectCount: avgs.length, failedSubjectCount: failedCount, finalizedAt: t(30), finalizedById: staffUser.id, classId: enr.classId },
+      create: { studentId: enr.studentId, semesterId: hk1.id, classId: enr.classId, semesterAverage: semAvg, academicRating: rating, subjectCount: avgs.length, failedSubjectCount: failedCount, finalizedAt: t(30), finalizedById: staffUser.id },
+    });
+
+    await prisma.studentClassEnrollment.update({
+      where: { id: enr.id },
+      data: { semesterAverage: semAvg },
+    });
+  }
+
+  // ── 17. Thời khóa biểu 10A1 HK2 (UC5) ────────────────────────
+  const class10A1 = classMap.get('10A1')!;
+  const teacher01 = teacherMap.get('T001') ?? null;
+  const teacher02 = teacherMap.get('T002') ?? null;
+  const teacher03 = teacherMap.get('T003') ?? null;
+  const teacher04 = teacherMap.get('T004') ?? null;
+  const teacher05 = teacherMap.get('T005') ?? null;
+
+  const mathSubj = await prisma.subject.findUnique({ where:{ subjectCode:'MATH' } });
+  const litSubj  = await prisma.subject.findUnique({ where:{ subjectCode:'LIT' } });
+  const engSubj  = await prisma.subject.findUnique({ where:{ subjectCode:'ENG' } });
+  const phySubj  = await prisma.subject.findUnique({ where:{ subjectCode:'PHY' } });
+  const chemSubj = await prisma.subject.findUnique({ where:{ subjectCode:'CHEM' } });
+
+  const slots: Array<{ dayOfWeek:number; period:number; subjectId:number; teacherId:number; room:string }> = [];
+  if (teacher01 && mathSubj) {
+    slots.push({ dayOfWeek:1, period:1, subjectId:mathSubj.id, teacherId:teacher01.id, room:'101' });
+    slots.push({ dayOfWeek:3, period:2, subjectId:mathSubj.id, teacherId:teacher01.id, room:'101' });
+    slots.push({ dayOfWeek:5, period:1, subjectId:mathSubj.id, teacherId:teacher01.id, room:'101' });
+  }
+  if (teacher02 && litSubj) {
+    slots.push({ dayOfWeek:2, period:1, subjectId:litSubj.id, teacherId:teacher02.id, room:'102' });
+    slots.push({ dayOfWeek:4, period:1, subjectId:litSubj.id, teacherId:teacher02.id, room:'102' });
+  }
+  if (teacher03 && engSubj) {
+    slots.push({ dayOfWeek:1, period:3, subjectId:engSubj.id, teacherId:teacher03.id, room:'103' });
+    slots.push({ dayOfWeek:3, period:3, subjectId:engSubj.id, teacherId:teacher03.id, room:'103' });
+  }
+  if (teacher04 && phySubj) {
+    slots.push({ dayOfWeek:2, period:3, subjectId:phySubj.id, teacherId:teacher04.id, room:'201' });
+    slots.push({ dayOfWeek:5, period:3, subjectId:phySubj.id, teacherId:teacher04.id, room:'201' });
+  }
+  if (teacher05 && chemSubj) {
+    slots.push({ dayOfWeek:4, period:3, subjectId:chemSubj.id, teacherId:teacher05.id, room:'202' });
+  }
+
+  for (const slot of slots) {
+    const existing = await prisma.timetableSlot.findFirst({
+      where: { semesterId:hk2.id, classId:class10A1.id, dayOfWeek:slot.dayOfWeek, period:slot.period },
+    });
+    if (!existing) {
+      await prisma.timetableSlot.create({
+        data: { semesterId:hk2.id, classId:class10A1.id, ...slot, isActive:true },
+      });
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────
   console.log('\n✔ Seed hoàn tất.');
   console.log('──────────────────────────────────────────────────────');
