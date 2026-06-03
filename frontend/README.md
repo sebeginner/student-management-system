@@ -1,73 +1,100 @@
-# React + TypeScript + Vite
+# Student Management System — Frontend SE104
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite frontend cho hệ thống quản lý học sinh cấp 3.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Thư viện | Mục đích |
+|---|---|
+| React 19 + Vite | Bundler, HMR |
+| TypeScript | Type safety |
+| React Router 7 | Client-side routing |
+| TanStack Query | Server state, caching, refetch |
+| Zustand | Auth state (token, user) |
+| Tailwind CSS 4 | Styling |
+| shadcn/ui | UI components |
+| React Hook Form + Zod | Form validation |
+| Axios | HTTP client |
 
-## React Compiler
+## Cài đặt và chạy
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`.env`:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_API_BASE_URL=http://localhost:3000/api/v1
 ```
+
+Khởi động:
+
+```bash
+npm run dev
+```
+
+Frontend chạy tại `http://localhost:5173`.
+
+## Cấu trúc thư mục chính
+
+```
+frontend/src/
+  components/      — UI components dùng chung (table, modal, badge, ...)
+  pages/           — Page components theo feature
+  lib/
+    academic-api.ts — API layer duy nhất (tất cả Axios calls + types)
+    auth-store.ts   — Zustand store cho auth state
+  router/          — React Router config + ProtectedRoute
+  types/           — Shared TypeScript types
+```
+
+## Routes và phân quyền
+
+| Route | Page | Role được phép |
+|---|---|---|
+| `/login` | LoginPage | Public |
+| `/dashboard` | DashboardPage | Tất cả |
+| `/users`, `/roles` | UsersPage, RolesPage | ADMIN |
+| `/audit-logs` | AuditLogPage | ADMIN, ACADEMIC_STAFF |
+| `/students` | StudentsPage | ACADEMIC_STAFF, MANAGER |
+| `/classes`, `/classes/:id` | ClassesPage, ClassDetailPage | ACADEMIC_STAFF, MANAGER |
+| `/enrollments`, `/transfer` | EnrollmentsPage | ACADEMIC_STAFF |
+| `/teachers`, `/teacher-assignments` | TeachersPage, AssignmentsPage | ACADEMIC_STAFF, MANAGER |
+| `/parameters` | ParametersPage | ADMIN, ACADEMIC_STAFF, MANAGER |
+| `/scores`, `/scores/sheets/:id` | ScoreSheetsPage, ScoreEntryPage | ACADEMIC_STAFF, TEACHER |
+| `/score-entry` | ScoreSheetsPage (mode=entry) | TEACHER |
+| `/score-change-requests` | ScoreChangeRequestsPage | ACADEMIC_STAFF, TEACHER |
+| `/reports` | ReportsPage | ACADEMIC_STAFF, MANAGER |
+| `/semester-finalize` | SemesterFinalizePage | ACADEMIC_STAFF |
+| `/year-end` | YearEndPage | ACADEMIC_STAFF, MANAGER |
+| `/timetable` | TimetablePage | ACADEMIC_STAFF |
+| `/my-timetable` | MyTimetablePage (GET /timetable/my) | TEACHER, STUDENT |
+| `/conduct-assessment` | ConductAssessmentPage | TEACHER |
+| `/conduct-review` | ConductReviewPage | ACADEMIC_STAFF |
+| `/my-assignments` | MyTeacherAssignmentsPage | TEACHER |
+| `/class-report` | ClassReportPage | TEACHER |
+| `/subject-report` | SubjectReportPage | TEACHER |
+| `/my-profile` | MyProfilePage | STUDENT |
+| `/my-scores` | MyScoresPage | STUDENT |
+
+## API layer
+
+Tất cả API call đi qua `frontend/src/lib/academic-api.ts`. File này export các function theo module (auth, students, classes, scores...) và tất cả TypeScript types của response.
+
+Backend base URL lấy từ `VITE_API_BASE_URL`. Token JWT được đọc từ Zustand store và tự động gắn vào header `Authorization: Bearer`.
+
+## Phân quyền frontend
+
+- `ProtectedRoute` kiểm tra role từ auth store trước khi render page.
+- Menu sidebar ẩn/hiện theo role.
+- Backend vẫn enforce phân quyền độc lập — frontend ẩn menu là UX, không phải security.
+
+## Build
+
+```bash
+npm run build
+```
+
+Output tại `dist/`. Build check cũng kiểm tra TypeScript — nếu có lỗi type sẽ fail.

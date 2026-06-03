@@ -1,98 +1,128 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Student Management System — Backend SE104
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS + Prisma + PostgreSQL backend cho hệ thống quản lý học sinh cấp 3.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- NestJS + TypeScript
+- Prisma ORM + PostgreSQL
+- JWT (Passport)
+- Swagger/OpenAPI (`http://localhost:3000/api`)
+- bcrypt (hash password)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Cài đặt
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env
 ```
 
-## Compile and run the project
+Cập nhật `.env`:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/student_management?schema=public"
+JWT_SECRET="replace-me-please-change-this"
+JWT_EXPIRES_IN="8h"
+PORT=3000
+```
+
+Generate Prisma Client, chạy migration, seed:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npx prisma generate
+npx prisma migrate deploy
+npm run prisma:seed
 ```
 
-## Run tests
+Reset sạch để demo:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npx prisma migrate reset --force
+npm run prisma:seed
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Khởi động:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+- API: `http://localhost:3000/api/v1`
+- Swagger UI: `http://localhost:3000/api`
 
-## Resources
+## Tài khoản demo
 
-Check out a few resources that may come in handy when working with NestJS:
+| Vai trò | Username | Password | Ghi chú |
+|---|---|---|---|
+| Admin | `admin` | `Admin@123` | Quản lý tài khoản, role, tham số |
+| Giáo vụ | `giaovu01` | `Staff@123` | Toàn quyền nghiệp vụ học vụ |
+| Ban giám hiệu | `manager01` | `Manager@123` | Chỉ xem báo cáo |
+| GVCN 10A1 + GVBM Toán | `teacher01` | `Teacher@123` | Nguyễn Tuấn An — dạy Toán 10A1, 10A2 |
+| GVCN 10A2 + GVBM Văn | `teacher02` | `Teacher@123` | Trần Thị Bích Ngọc — dạy Văn 10A1, 10A2 |
+| GVCN 11A1 + GVBM Anh | `teacher03` | `Teacher@123` | Lê Văn Cường — dạy Anh 10A1, 11A1 |
+| GVCN 12A1 + GVBM Vật lý | `teacher04` | `Teacher@123` | Phạm Thị Duyên — dạy VL 10A1, 11A1, 12A1 |
+| GVBM Hóa học | `teacher05` | `Teacher@123` | Hoàng Minh Đức — dạy Hóa 10A1, 10A2 |
+| Học sinh | `student01`–`student05` | `Student@123` | Lớp 10A1 |
+| Học sinh | `student07` | `Student@123` | Lớp 10A2 |
+| Học sinh (chờ lớp) | `student06` | `Student@123` | Đỗ Ngọc Lan — chưa phân lớp |
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+> GVCN/GVBM không phải role riêng — đều là `TEACHER`. Vai trò được xác định qua `TeacherAssignment.assignmentType`.
 
-## Support
+## Seed data
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- **Năm học:** `2025-2026` (isActive=true)
+- **HK1:** 01/09/2025–15/01/2026 (completed)
+- **HK2:** 16/01/2026–30/05/2026 (active)
+- **Lớp:** 10A1(20hs), 10A2(15hs), 11A1(15hs), 11A2(12hs), 12A1(8hs) + 3 hs chờ phân lớp
+- **Môn:** Toán, Ngữ văn, Tiếng Anh, Vật lý, Hóa học
+- **Bảng điểm HK1:** LOCKED/SUBMITTED/DRAFT (xem seed.ts để biết chi tiết)
+- **Bảng điểm HK2:** Toán/10A1 (DRAFT 10/20), Văn/10A1 (DRAFT 8/20)
+- **SCR:** 1 PENDING (Toán/HK1/S003), 1 APPROVED (Văn/HK1/S001)
+- **Hạnh kiểm:** 5 FINALIZED + 3 SUBMITTED (lớp 10A1 HK1)
+- **Thời khóa biểu:** 11 tiết lớp 10A1 HK2
 
-## Stay in touch
+## Modules backend
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```
+src/
+  auth/                  — Đăng nhập, JWT, Guards
+  users/                 — Quản lý tài khoản (ADMIN only)
+  students/              — Hồ sơ học sinh
+  teachers/              — Hồ sơ giáo viên
+  academic-years/        — Năm học
+  semesters/             — Học kỳ
+  grade-levels/          — Khối lớp
+  classes/               — Lớp học
+  subjects/              — Môn học
+  enrollments/           — Phân lớp, chuyển lớp
+  teacher-assignments/   — Phân công GVCN/GVBM
+  system-parameters/     — Tham số hệ thống
+  scores/                — Bảng điểm, nhập điểm, lock, PDF
+  score-change-requests/ — Yêu cầu sửa điểm
+  reports/               — Báo cáo môn, học kỳ, dashboard, PDF
+  semester-results/      — Chốt kết quả HK + tổng kết năm
+  conduct-assessments/   — Hạnh kiểm
+  timetable/             — Thời khóa biểu
+  import/                — Import Excel (học sinh + điểm)
+  audit-logs/            — Nhật ký hệ thống
+  common/                — Guards, decorators, filters, utils
+```
 
-## License
+## Demo flow ngắn
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1. `giaovu01`: xem học sinh, lớp, phân công GV.
+2. `giaovu01`: khóa bảng điểm Vật lý/10A1/HK1 (SUBMITTED → LOCKED).
+3. `giaovu01`: duyệt yêu cầu sửa điểm PENDING.
+4. `teacher01`: nhập điểm Toán/10A1/HK2; submit.
+5. `teacher01`: tạo yêu cầu sửa điểm trên bảng LOCKED.
+6. `student01`: xem điểm cá nhân.
+7. `manager01`: xem báo cáo dashboard và tổng kết.
+
+Script thuyết trình chi tiết: `../docs/final-demo-script.md`
+
+## Kiểm tra build
+
+```bash
+npm run build
+npm test
+```
