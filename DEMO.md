@@ -2,19 +2,55 @@
 
 ## Khởi động
 
-```powershell
-# Cài dependencies (lần đầu)
-cd backend  && npm install
-cd ../frontend && npm install
+### Bước 1 – Cài dependencies (lần đầu)
 
-# Nạp dữ liệu demo (reset toàn bộ về trạng thái ban đầu)
-cd backend && npm run prisma:seed
-
-# Chạy hệ thống
-./start-demo.ps1
-# Backend:  http://localhost:3000/api/v1
-# Frontend: http://127.0.0.1:5173
+```cmd
+cd backend   && npm install
+cd ..\frontend && npm install
 ```
+
+### Bước 2 – Nạp dữ liệu demo
+
+```cmd
+cd backend
+npm run prisma:seed
+```
+
+> Chạy lại bất cứ lúc nào để **reset** demo về trạng thái ban đầu (seed là idempotent).
+
+### Bước 3 – Chạy hệ thống
+
+**Cách A – Double-click** (Windows CMD):
+```
+start-demo.bat
+```
+Mở 2 cửa sổ CMD riêng (backend + frontend). Đợi ~10 giây rồi mở trình duyệt.
+
+**Cách B – Thủ công** (2 terminal riêng):
+
+Terminal 1 – Backend:
+```cmd
+cd backend
+npm run start
+```
+
+Terminal 2 – Frontend:
+```cmd
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+**Cách C – PowerShell** (nếu đã bật execution policy):
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+.\start-demo.ps1
+```
+
+| Dịch vụ | URL |
+|---------|-----|
+| Frontend | http://127.0.0.1:5173 |
+| Backend API | http://localhost:3000/api/v1 |
+| Swagger UI | http://localhost:3000/api |
 
 ---
 
