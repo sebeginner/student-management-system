@@ -35,6 +35,7 @@ Một giáo viên có thể vừa là GVCN vừa là GVBM. Quyền được cộ
 - Quản lý role/permission.
 - Xem nhật ký hệ thống (`/audit-logs`).
 - Xem và cập nhật tham số hệ thống (`/system-parameters`).
+- Tạo thông báo (không giới hạn scope); xoá bất kỳ thông báo nào.
 - Bypass dev: ADMIN có thể xem hầu hết dữ liệu để debug, nhưng **không phải actor nghiệp vụ học vụ**.
 
 ### Giáo vụ (`ACADEMIC_STAFF`)
@@ -52,6 +53,7 @@ Một giáo viên có thể vừa là GVCN vừa là GVBM. Quyền được cộ
 - Import học sinh, import điểm.
 - Quản lý thời khóa biểu.
 - Xem nhật ký hệ thống.
+- Tạo thông báo (toàn trường hoặc theo role, không giới hạn `classId`); xoá bất kỳ thông báo nào.
 
 ### BGH / Manager (`MANAGER`)
 
@@ -59,6 +61,7 @@ Một giáo viên có thể vừa là GVCN vừa là GVBM. Quyền được cộ
 - Xem dashboard summary.
 - Xem danh sách học sinh, lớp, giáo viên, phân công.
 - Xem tham số hệ thống (không sửa).
+- Tạo thông báo (toàn trường hoặc theo role); không xoá thông báo của người khác.
 - **Không** nhập điểm, không phân lớp, không chuyển lớp, không khóa bảng điểm.
 
 ### TEACHER (vai trò thay đổi theo TeacherAssignment)
@@ -69,6 +72,7 @@ Một giáo viên có thể vừa là GVCN vừa là GVBM. Quyền được cộ
 - Xem danh sách phân công của mình (`GET /me/teacher-assignments`).
 - Xem yêu cầu sửa điểm do mình gửi.
 - Xem hồ sơ học sinh thuộc lớp mình liên quan.
+- Tạo thông báo **chỉ đến lớp mình được phân công** (HOMEROOM hoặc SUBJECT); `classId` bắt buộc, backend kiểm tra `TeacherAssignment`; thông báo luôn gửi đến `targetRole = STUDENT`.
 
 **GVCN (HOMEROOM):**
 
@@ -97,7 +101,8 @@ Một giáo viên có thể vừa là GVCN vừa là GVBM. Quyền được cộ
 - Xem báo cáo học kỳ cá nhân (`GET /reports/student-semester/:studentId`).
 - Xem thời khóa biểu cá nhân (`GET /timetable/my`).
 - Tải phiếu điểm PDF (`GET /reports/student-transcript/:studentId/pdf`).
-- **Không** xem dữ liệu của học sinh khác.
+- Xem thông báo toàn trường, thông báo đúng role, thông báo lớp đang theo học.
+- **Không** xem dữ liệu của học sinh khác; **không** tạo thông báo.
 
 ---
 
@@ -158,3 +163,4 @@ Các hàm `can...` trong `PermissionScopeService` ném `ForbiddenException` vớ
 | `NOT_STUDENT_OWNER` | Student đang cố xem dữ liệu của người khác |
 | `SCORE_SHEET_LOCKED` | Bảng điểm đã khóa, không sửa trực tiếp |
 | `ONLY_ACADEMIC_STAFF_CAN_APPROVE` | Chỉ Giáo vụ được duyệt/từ chối SCR |
+| `NOT_ASSIGNED_TO_CLASS` | TEACHER gửi thông báo đến lớp không được phân công |

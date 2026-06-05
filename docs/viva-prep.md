@@ -19,6 +19,8 @@ Hệ thống hỗ trợ một trường THPT số hóa toàn bộ quy trình h�
 - Import học sinh và điểm từ Excel; xuất PDF bảng điểm và phiếu điểm cá nhân
 - Báo cáo tổng kết môn, học kỳ, dashboard
 - Nhật ký hệ thống (audit log)
+- Quản lý Năm học & Học kỳ qua UI (tạo, cập nhật, đặt active)
+- Thông báo nội bộ: tạo theo phạm vi (toàn trường/role/lớp), badge chưa đọc, giới hạn lớp cho TEACHER
 
 ### Actor chính là ai?
 
@@ -701,7 +703,7 @@ model Student {
 
 ---
 
-### Tình huống 7 — Nhiều giáo viên cùng dạy một môn
+### Tình huống 7 — Nhiều giáo viên cùng dạy một mcôn
 
 **Vấn đề hiện tại:**
 `ScoreSheet` có `@@unique([classId, subjectId, semesterId])` — chỉ 1 bảng điểm cho 1 lớp + 1 môn + 1 HK. Không hỗ trợ 2 GV chia nhóm.

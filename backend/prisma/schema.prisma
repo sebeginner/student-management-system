@@ -70,6 +70,8 @@ model User {
   yearEndResultsFinalized  YearEndResult[]
   conductSubmitted         ConductAssessment[]     @relation("ConductSubmitted")
   conductReviewed          ConductAssessment[]     @relation("ConductReviewed")
+  createdNotifications     Notification[]          @relation("NotificationCreator")
+  notificationReads        NotificationRead[]      @relation("NotificationReads")
 
   @@map("users")
 }
@@ -193,6 +195,7 @@ model Class {
   yearEndResults          YearEndResult[]
   conductAssessments      ConductAssessment[]
   timetableSlots          TimetableSlot[]
+  notifications           Notification[]
 
   @@unique([schoolYearId, name])
   @@map("classes")
@@ -563,6 +566,39 @@ model TimetableSlot {
   @@unique([semesterId, classId, dayOfWeek, period], name: "unique_class_slot")
   @@unique([semesterId, teacherId, dayOfWeek, period], name: "unique_teacher_slot")
   @@map("timetable_slots")
+}
+
+// ==========================================
+// NHÓM 9: THÔNG BÁO
+// ==========================================
+model Notification {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String   @db.Text
+  targetRole  String?  @map("target_role") // null = broadcast; hoặc tên role cụ thể
+  classId     Int?     @map("class_id")    // null = toàn trường; có giá trị = chỉ lớp đó
+  createdById Int      @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy User               @relation("NotificationCreator", fields: [createdById], references: [id])
+  class     Class?             @relation(fields: [classId], references: [id])
+  reads     NotificationRead[]
+
+  @@map("notifications")
+}
+
+model NotificationRead {
+  id             Int      @id @default(autoincrement())
+  notificationId Int      @map("notification_id")
+  userId         Int      @map("user_id")
+  readAt         DateTime @default(now()) @map("read_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation("NotificationReads", fields: [userId], references: [id])
+
+  @@unique([notificationId, userId])
+  @@map("notification_reads")
 }
 
 // ==========================================

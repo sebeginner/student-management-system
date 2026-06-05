@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
 import Login from '../Login';
+import { AcademicYearsPage } from '../pages/academic-years/AcademicYearsPage';
+import { SemestersPage } from '../pages/semesters/SemestersPage';
+import { NotificationsPage } from '../pages/notifications/NotificationsPage';
 import { ClassDetailPage } from '../pages/classes/ClassDetailPage';
 import { ClassesPage } from '../pages/classes/ClassesPage';
 import { EnrollmentsPage } from '../pages/enrollments/EnrollmentsPage';
@@ -37,6 +40,11 @@ export const AppRouter = () => {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'ACADEMIC_STAFF']} />}>
+            <Route path="academic-years" element={<AcademicYearsPage />} />
+            <Route path="semesters" element={<SemestersPage />} />
+          </Route>
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="users" element={<UsersPage />} />
             <Route path="roles" element={<RolesPage />} />

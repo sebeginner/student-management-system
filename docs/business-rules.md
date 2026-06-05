@@ -231,6 +231,21 @@ Xếp loại học lực học kỳ (`SemesterStudentResult.academicRating`):
 
 ---
 
+## 17. Quy tắc thông báo (UC-22)
+
+| Mã | Quy tắc | Diễn giải | Ưu tiên |
+|---|---|---|---|
+| BR-NTF-01 | Chỉ ADMIN, ACADEMIC_STAFF, MANAGER, TEACHER được tạo thông báo | STUDENT không tạo được | Must |
+| BR-NTF-02 | TEACHER bắt buộc phải chọn `classId` khi tạo | Không cho phép gửi toàn trường hoặc theo role | Must |
+| BR-NTF-03 | TEACHER chỉ chọn lớp mình được phân công | Backend kiểm tra `TeacherAssignment` active — 403 nếu lớp không hợp lệ | Must |
+| BR-NTF-04 | Thông báo TEACHER luôn gửi đến `targetRole = 'STUDENT'` | Giáo viên chỉ nhắn học sinh lớp mình, không gửi cho GV khác | Must |
+| BR-NTF-05 | Học sinh chỉ thấy thông báo thuộc phạm vi của mình | `classId = null` hoặc `classId` trong các lớp đang theo học | Must |
+| BR-NTF-06 | Chỉ ADMIN và ACADEMIC_STAFF được xoá thông báo | | Must |
+| BR-NTF-07 | Đọc thông báo lưu vào `NotificationRead` (upsert — không tạo trùng) | | Must |
+| BR-NTF-08 | Số thông báo chưa đọc = tổng thông báo trong phạm vi − số đã đọc | Dùng cho badge chuông | Must |
+
+---
+
 ## 16. Quy tắc ghi log (UC6)
 
 Các thao tác quan trọng cần ghi vào `AuditLog`:

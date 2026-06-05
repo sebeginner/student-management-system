@@ -131,6 +131,7 @@ cd ../frontend && npm run build
 - **Yêu cầu sửa điểm:** 1 PENDING (Toán/HK1/S003), 1 APPROVED (Văn/HK1/S001)
 - **Kết quả HK1:** đã chốt cho lớp 10A1 (`SemesterStudentResult`)
 - **Thời khóa biểu:** lớp 10A1 HK2 đã có sẵn 11 tiết
+- **Thông báo:** 6 thông báo seed — 2 toàn trường (giáo vụ), 2 lớp 10A1 (teacher01), 1 lớp 10A2 (teacher02), 1 lớp 12A1 (teacher04)
 
 ## Demo flow ngắn
 
@@ -143,6 +144,10 @@ cd ../frontend && npm run build
 7. Đăng nhập `giaovu01` → vào **Yêu cầu sửa điểm** → duyệt yêu cầu.
 8. Đăng nhập `student01` → vào **Điểm của tôi** → xem điểm cá nhân.
 9. Đăng nhập `manager01` → vào **Báo cáo** → xem dashboard và báo cáo tổng hợp.
+10. Đăng nhập `giaovu01` → **Năm học** → tạo năm học `2026-2027`.
+11. Đăng nhập `giaovu01` → **Thông báo** → tạo thông báo toàn trường về lịch thi.
+12. Đăng nhập `teacher01` → **Thông báo** → gửi thông báo họp phụ huynh đến lớp 10A1.
+13. Đăng nhập `student01` → thấy chuông có badge → vào **Thông báo** → đọc.
 
 ## Phân quyền cần nhớ khi demo
 
@@ -151,6 +156,8 @@ cd ../frontend && npm run build
 - GVCN chỉ xem báo cáo/lớp chủ nhiệm; không sửa điểm môn mình không được phân công GVBM.
 - GVBM chỉ nhập/sửa/xem report trong phạm vi lớp, môn, học kỳ được phân công.
 - Chỉ Giáo vụ (`ACADEMIC_STAFF`) được khóa bảng điểm và duyệt yêu cầu sửa điểm.
+- Giáo viên chỉ gửi thông báo đến lớp mình được phân công (GVCN hoặc GVBM); không gửi được đến lớp khác.
+- Học sinh chỉ thấy thông báo toàn trường, thông báo đúng role, và thông báo lớp mình đang học.
 
 Chi tiết script thuyết trình nằm ở `docs/final-demo-script.md`.  
 Hướng dẫn demo đầy đủ nằm ở `DEMO.md`.

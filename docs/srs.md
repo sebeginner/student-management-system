@@ -7,7 +7,7 @@ Hệ thống Quản lý học sinh hỗ trợ nhà trường cấp 3 số hóa c
 Luồng demo chính:
 
 ```text
-Đăng nhập → Quản lý học sinh → Phân lớp → Phân công GV → Nhập điểm → Khóa điểm → Yêu cầu sửa điểm → Tra cứu → Báo cáo
+Đăng nhập → Quản lý học sinh → Phân lớp → Phân công GV → Nhập điểm → Khóa điểm → Yêu cầu sửa điểm → Tra cứu → Báo cáo → Thông báo nội bộ
 ```
 
 ## 2. Phạm vi đã thực hiện
@@ -33,6 +33,8 @@ Luồng demo chính:
 - Xuất PDF bảng điểm lớp và phiếu kết quả cá nhân.
 - Nhật ký hệ thống (audit log).
 - Quản lý tài khoản người dùng (ADMIN).
+- **Quản lý Năm học & Học kỳ qua UI** (tạo, cập nhật, đặt active).
+- **Hệ thống Thông báo nội bộ**: tạo thông báo theo phạm vi (toàn trường / role / lớp), đọc/xoá, badge chưa đọc trên header.
 
 ### 2.2. Ngoài phạm vi
 
@@ -42,7 +44,7 @@ Luồng demo chính:
 - Phụ huynh portal.
 - Multi-school/multi-tenant.
 - Mobile app.
-- Notification realtime.
+- Notification realtime (WebSocket/push — hệ thống hiện dùng polling qua REST).
 - AI recommendation.
 
 ## 3. Actor và role

@@ -146,7 +146,45 @@ Ràng buộc unique:
 
 ---
 
-## 9. Ràng buộc quan trọng
+## 9. Nhóm 9 — Thông báo (UC-22)
+
+| Model | Table | Mục đích |
+|---|---|---|
+| `Notification` | `notifications` | Nội dung thông báo kèm phạm vi gửi |
+| `NotificationRead` | `notification_reads` | Theo dõi trạng thái đã đọc của từng người dùng |
+
+### Notification
+
+Trường chính: `id`, `title`, `content` (Text), `targetRole` (nullable — null = broadcast), `classId` (nullable — null = không giới hạn lớp), `createdById` (FK → User), `createdAt`, `updatedAt`.
+
+Phạm vi hiển thị theo kết hợp `targetRole` và `classId`:
+
+| targetRole | classId | Ai thấy |
+|---|---|---|
+| null | null | Tất cả |
+| `STUDENT` | null | Chỉ học sinh |
+| `STUDENT` | N | Chỉ học sinh của lớp N |
+| `TEACHER` | null | Chỉ giáo viên |
+
+### NotificationRead
+
+Trường chính: `notificationId` (FK), `userId` (FK), `readAt`.
+
+Unique: `[notificationId, userId]` — một người chỉ đọc mỗi thông báo một lần.
+
+`onDelete: Cascade` — xoá thông báo → tự xoá tất cả bản ghi đã đọc liên quan.
+
+### Quan hệ với User và Class
+
+`User` có hai relation mới:
+- `createdNotifications Notification[]` (`@relation("NotificationCreator")`)
+- `notificationReads NotificationRead[]` (`@relation("NotificationReads")`)
+
+`Class` có thêm `notifications Notification[]`.
+
+---
+
+## 10. Ràng buộc quan trọng
 
 | Ràng buộc | Ý nghĩa |
 |---|---|
