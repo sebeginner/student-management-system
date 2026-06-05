@@ -24,6 +24,7 @@ import { ConductAssessmentsModule } from './conduct-assessments/conduct-assessme
 import { TimetableModule } from './timetable/timetable.module';
 import { SemesterResultsModule } from './semester-results/semester-results.module';
 import { ImportModule } from './import/import.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ImportModule } from './import/import.module';
     ConductAssessmentsModule,
     TimetableModule,
     ImportModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

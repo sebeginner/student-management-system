@@ -112,9 +112,9 @@ Ví dụ:
 
 ```text
 teacher01:
-- HOMEROOM lớp 10A1 năm học 2024-2025
-- SUBJECT môn Toán lớp 10A1 học kỳ I
-- SUBJECT môn Toán lớp 10A2 học kỳ I
+- HOMEROOM lớp 10A1 năm học 2025-2026
+- SUBJECT môn Toán lớp 10A1 HK1, HK2
+- SUBJECT môn Toán lớp 10A2 HK1, HK2
 ```
 
 Khi kiểm tra quyền, hệ thống cộng quyền theo các assignment active, nhưng không cho vượt phạm vi của từng assignment.
@@ -375,11 +375,12 @@ student-management-system/
 ├── docs/
 │   ├── api-spec.md
 │   ├── authorization.md
-│   ├── database.md
+│   ├── database-design.md
 │   ├── business-rules.md
-│   ├── ui-spec.md
-│   ├── workflow.md
-│   └── seed-data.md
+│   ├── use-cases.md
+│   ├── demo-flow.md
+│   ├── final-demo-script.md
+│   └── test-plan.md
 │
 ├── AGENTS.md
 └── README.md
@@ -488,8 +489,8 @@ Chức năng:
 
 Seed tối thiểu:
 
-- Năm học `2024-2025`.
-- Học kỳ `I`, `II`.
+- Năm học `2025-2026`.
+- Học kỳ `HK1`, `HK2`.
 
 ### 7.6. `grade-levels`, `classes`
 
@@ -1183,45 +1184,83 @@ Giáo vụ:
   username: giaovu01
   password: Staff@123
   role: ACADEMIC_STAFF
+  fullName: Giáo vụ Hoài
 
 BGH/Manager:
   username: manager01
   password: Manager@123
   role: MANAGER
+  fullName: Phó Hiệu trưởng
 
-Giáo viên 1:
+Giáo viên 1 — GVCN 10A1 + GVBM Toán:
   username: teacher01
   password: Teacher@123
   role: TEACHER
+  fullName: Nguyễn Tuấn An
   assignment:
-    - HOMEROOM lớp 10A1 năm học 2024-2025
-    - SUBJECT môn Toán lớp 10A1 học kỳ I
+    - HOMEROOM lớp 10A1 năm học 2025-2026
+    - SUBJECT môn Toán lớp 10A1 HK1 và HK2
+    - SUBJECT môn Toán lớp 10A2 HK1 và HK2
 
-Giáo viên 2:
+Giáo viên 2 — GVCN 10A2 + GVBM Văn:
   username: teacher02
   password: Teacher@123
   role: TEACHER
+  fullName: Trần Thị Bích Ngọc
   assignment:
-    - SUBJECT môn Văn lớp 10A1 học kỳ I
+    - HOMEROOM lớp 10A2 năm học 2025-2026
+    - SUBJECT môn Ngữ văn lớp 10A1 HK1 và HK2
+    - SUBJECT môn Ngữ văn lớp 10A2 HK1 và HK2
 
-Học sinh:
-  username: student01
-  password: Student@123
-  role: STUDENT
-  enrollment:
-    - lớp 10A1 học kỳ I
+Giáo viên 3 — GVCN 11A1 + GVBM Anh:
+  username: teacher03
+  password: Teacher@123
+  role: TEACHER
+  fullName: Lê Văn Cường
+  assignment:
+    - HOMEROOM lớp 11A1 năm học 2025-2026
+    - SUBJECT môn Tiếng Anh lớp 10A1 HK1
+    - SUBJECT môn Tiếng Anh lớp 11A1 HK1 và HK2
+
+Giáo viên 4 — GVCN 12A1 + GVBM Vật lý:
+  username: teacher04
+  password: Teacher@123
+  role: TEACHER
+  fullName: Phạm Thị Duyên
+  assignment:
+    - HOMEROOM lớp 12A1 năm học 2025-2026
+    - SUBJECT môn Vật lý lớp 10A1, 11A1, 12A1 (HK1); 10A1, 12A1 (HK2)
+
+Giáo viên 5 — GVBM Hóa học (không chủ nhiệm):
+  username: teacher05
+  password: Teacher@123
+  role: TEACHER
+  fullName: Hoàng Minh Đức
+  assignment:
+    - SUBJECT môn Hóa học lớp 10A1, 10A2 HK1
+    - SUBJECT môn Hóa học lớp 10A1 HK2
+
+Học sinh (có tài khoản):
+  username: student01–student05   lớp 10A1   password: Student@123
+  username: student06             chờ phân lớp
+  username: student07             lớp 10A2
 ```
 
 ### 13.2. Dữ liệu học vụ
 
-- Năm học: `2024-2025`.
-- Học kỳ: `I`, `II`.
+- Năm học: `2025-2026` (đang hoạt động).
+- Học kỳ: `HK1` (01/09/2025–15/01/2026, đã kết thúc), `HK2` (16/01/2026–30/05/2026, đang active).
 - Khối lớp: `10`, `11`, `12`.
-- Lớp: `10A1`, `10A2`, `11A1`, `12A1`.
-- Môn học: Toán, Văn, Anh, Lý, Hóa, Sinh, Sử, Địa.
-- Tham số: minAge 15, maxAge 20, maxClassSize 40, minScore 0, maxScore 10, passSubjectScore 5, passSemesterScore 5.
-- Một số học sinh mẫu thuộc lớp 10A1.
-- Một bảng điểm mẫu môn Toán học kỳ I.
+- Lớp: `10A1` (20 hs), `10A2` (15 hs), `11A1` (15 hs), `11A2` (12 hs, chưa có GVCN), `12A1` (8 hs). Ngoài ra có 3 học sinh chờ phân lớp.
+- Môn học: Toán (MATH), Ngữ văn (LIT), Tiếng Anh (ENG), Vật lý (PHY), Hóa học (CHEM).
+- Tham số: minAge 15, maxAge 20, maxClassSize 40, minScore 0, maxScore 10, subjectPassScore 5, semesterPassScore 5.
+- Loại điểm: ORAL_15M (hệ số 1), ONE_PERIOD (hệ số 2), MIDTERM (hệ số 3), FINAL (hệ số 3).
+- Bảng điểm HK1: LOCKED (Toán/Văn/Anh 10A1, Toán/Văn 10A2, Anh 11A1, VL 12A1), SUBMITTED (VL 10A1, VL 11A1), DRAFT (Hóa 10A1 — 12/20 hs).
+- Bảng điểm HK2: DRAFT — Toán/10A1 (10/20 hs), Văn/10A1 (8/20 hs).
+- Yêu cầu sửa điểm: 1 PENDING (Toán/HK1/S003), 1 APPROVED (Văn/HK1/S001).
+- Kết quả HK1 đã được chốt cho lớp 10A1 (`SemesterStudentResult`).
+- Thời khóa biểu: lớp 10A1 HK2 có 11 tiết mẫu (Toán×3, Văn×2, Anh×2, VL×2, Hóa×1 tiết/tuần).
+- Hạnh kiểm: 5 hs 10A1 HK1 đã FINALIZED (S001–S005), 3 hs SUBMITTED (S101–S103).
 
 ---
 
@@ -1417,12 +1456,12 @@ Dùng exception chuẩn NestJS:
 | Khi thay đổi | File cần cập nhật |
 |---|---|
 | API endpoint | `docs/api-spec.md` |
-| Database schema | `docs/database.md`, `backend/prisma/schema.prisma` |
+| Database schema | `docs/database-design.md`, `backend/prisma/schema.prisma` |
 | Business rule | `docs/business-rules.md` |
 | Phân quyền | `docs/authorization.md` |
-| Giao diện/màn hình | `docs/ui-spec.md` |
-| Seed data | `docs/seed-data.md`, `backend/prisma/seed.ts` |
-| Quy trình làm việc | `docs/workflow.md` hoặc `AGENTS.md` |
+| Use case | `docs/use-cases.md` |
+| Seed data | `backend/prisma/seed.ts`, `AGENTS.md §13` |
+| Demo script | `docs/final-demo-script.md`, `DEMO.md` |
 
 Không để tình trạng API trong code khác với `api-spec.md`.
 

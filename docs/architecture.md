@@ -1,10 +1,10 @@
-# Architecture - Kiến trúc hệ thống Quản lý học sinh
+# Architecture — Kiến trúc hệ thống Quản lý học sinh SE104
 
 ## 1. Mục tiêu kiến trúc
 
-Hệ thống cần dễ làm trong 2 tuần, dễ demo, dễ chia việc cho nhóm 3 người và đủ khả năng mở rộng sau MVP.
+Hệ thống cần dễ demo, dễ chia việc cho nhóm và đủ khả năng phát triển sau MVP.
 
-Kiến trúc đề xuất:
+Kiến trúc:
 
 ```text
 React Frontend → REST API NestJS → Prisma ORM → PostgreSQL
@@ -14,153 +14,159 @@ React Frontend → REST API NestJS → Prisma ORM → PostgreSQL
 
 | Thành phần | Công nghệ | Vai trò |
 |---|---|---|
-| Frontend | React + Vite + TypeScript | Giao diện người dùng |
+| Frontend | React 19 + Vite + TypeScript | Giao diện người dùng |
 | Backend | NestJS + TypeScript | API, business logic, auth |
-| ORM | Prisma | Truy cập database |
-| Database | PostgreSQL | Lưu dữ liệu hệ thống |
-| Auth | JWT + bcrypt | Đăng nhập, bảo vệ API |
-| Docs | Markdown | Thống nhất yêu cầu, API, test |
+| ORM | Prisma | Truy cập database, migrations |
+| Database | PostgreSQL 14+ | Lưu dữ liệu hệ thống |
+| Auth | JWT + bcrypt (Passport) | Đăng nhập, bảo vệ API |
+| API Docs | Swagger/OpenAPI | `http://localhost:3000/api` |
 
 ## 3. Luồng request
 
 ```text
 User thao tác UI
-→ Frontend gọi API
+→ Frontend (TanStack Query / Axios)
 → Controller nhận request
-→ DTO validate dữ liệu cơ bản
-→ Service xử lý business rules
-→ Prisma truy vấn database
+→ JwtAuthGuard + RolesGuard kiểm tra auth/role
+→ DTO validate dữ liệu đầu vào
+→ Service xử lý business rules + scope check (TeacherAssignment)
+→ PrismaService truy vấn / transaction
 → Service trả kết quả
-→ Controller trả response
-→ Frontend hiển thị
+→ Controller trả response JSON
+→ Frontend cập nhật UI
 ```
 
-## 4. Backend module đề xuất
+## 4. Backend modules thực tế
 
 ```text
 backend/src/
-  auth/
-  users/
-  prisma/
-  students/
-  classes/
-  subjects/
-  school-years/
-  semesters/
-  grade-levels/
-  parameters/
-  score-sheets/
-  reports/
-  teacher-assignments/
-  common/
+  auth/                  — Login, JWT strategy, Guards
+  users/                 — CRUD tài khoản (ADMIN only)
+  students/              — Hồ sơ học sinh, CRUD
+  teachers/              — Hồ sơ giáo viên, CRUD
+  academic-years/        — Năm học
+  semesters/             — Học kỳ
+  grade-levels/          — Khối lớp (10, 11, 12)
+  classes/               — Lớp học
+  subjects/              — Môn học
+  enrollments/           — Phân lớp, chuyển lớp
+  teacher-assignments/   — Phân công GVCN/GVBM
+  system-parameters/     — Tham số hệ thống (tuổi, sĩ số, điểm)
+  scores/                — Bảng điểm, nhập điểm, submit, lock, PDF
+  score-change-requests/ — Yêu cầu sửa điểm sau khi LOCKED
+  reports/               — Báo cáo môn, HK, dashboard, PDF phiếu điểm
+  semester-results/      — Chốt kết quả HK + tổng kết năm học
+  conduct-assessments/   — Hạnh kiểm học sinh
+  timetable/             — Thời khóa biểu
+  import/                — Import Excel học sinh + điểm
+  audit-logs/            — Nhật ký thao tác hệ thống
+  common/                — Guards, decorators, filters, api-response helper
+  authorization/         — PermissionScopeService (kiểm tra scope GVCN/GVBM)
+  prisma/                — PrismaService (singleton)
 ```
 
 ## 5. Trách nhiệm từng layer backend
 
 | Layer | Trách nhiệm | Không nên làm |
 |---|---|---|
-| Controller | Nhận request, gọi service, trả response | Không viết business logic phức tạp |
-| DTO | Validate format, field bắt buộc | Không query database |
-| Service | Business rules, transaction, tính toán | Không xử lý UI |
-| PrismaService | Kết nối database | Không chứa nghiệp vụ |
+| Controller | Nhận request, gọi service, trả response | Không viết business logic, không query DB trực tiếp |
+| DTO | Validate format, field bắt buộc, type | Không query database, không business logic |
+| Service | Business rules, transaction, scope check | Không xử lý HTTP |
+| PrismaService | Kết nối database | Không chứa business logic |
 | Guard | Kiểm tra auth/role | Không xử lý dữ liệu nghiệp vụ |
+| PermissionScopeService | Kiểm tra scope GVCN/GVBM | Là service nội bộ, không phải guard |
 
-## 6. Frontend structure đề xuất
+## 6. Frontend structure thực tế
 
 ```text
 frontend/src/
-  components/
-    common/
-    layout/
-  pages/
-    auth/
-    dashboard/
-    students/
-    classes/
-    scores/
-    reports/
-    users/
-  services/
-    api.ts
-    auth.service.ts
-    students.service.ts
-    classes.service.ts
-    scores.service.ts
-    reports.service.ts
-  types/
-  hooks/
-  utils/
+  components/        — UI components dùng chung
+  pages/             — Page components theo feature
+  lib/
+    academic-api.ts  — Toàn bộ Axios calls + TypeScript types
+    auth-store.ts    — Zustand: token, user info
+  router/            — React Router config + ProtectedRoute
+  types/             — Shared types
 ```
 
 ## 7. Quy ước API
 
-- Base URL đề xuất: `http://localhost:3000/api/v1`.
-- Backend nên thêm trong `main.ts`:
+Base URL: `http://localhost:3000/api/v1`
 
-```ts
-app.setGlobalPrefix('api/v1');
-```
-
-- Dùng JSON cho request/response.
-- API cần JWT thì gửi header:
+Mọi request (trừ login) cần header:
 
 ```http
 Authorization: Bearer <access_token>
+```
+
+Response thành công:
+
+```json
+{ "data": {}, "message": "Success" }
+```
+
+Response lỗi:
+
+```json
+{ "statusCode": 400, "message": "Mô tả lỗi", "error": "Bad Request" }
 ```
 
 ## 8. Auth architecture
 
 ```text
 POST /auth/login
-→ kiểm tra username/password
-→ bcrypt.compare
-→ tạo JWT payload { sub, username, role }
-→ trả access_token + user
+→ kiểm tra User.status = ACTIVE
+→ bcrypt.compare(password, passwordHash)
+→ tạo JWT payload { sub, username, role, teacherId, studentId }
+→ trả accessToken (8 giờ) + thông tin user
 ```
 
-Frontend lưu token tạm trong localStorage/sessionStorage cho MVP.
+Frontend lưu token trong Zustand store (in-memory) cho MVP.
 
-## 9. Role-based access MVP
+## 9. Role-based access
 
-| Role | Quyền MVP |
+| Role | Quyền |
 |---|---|
-| ADMIN | Toàn quyền quản lý dữ liệu, người dùng, tham số, báo cáo |
-| TEACHER | Xem lớp, nhập điểm, tra cứu học sinh/điểm |
-| STUDENT | Xem điểm và lớp cá nhân |
+| `ADMIN` | Quản lý tài khoản, role, tham số, audit log |
+| `ACADEMIC_STAFF` | Toàn quyền nghiệp vụ học vụ: học sinh, lớp, điểm, báo cáo, import |
+| `MANAGER` | Xem báo cáo toàn trường (read-only) |
+| `TEACHER` | Quyền theo `TeacherAssignment` — GVCN xem lớp CN, GVBM nhập/sửa điểm |
+| `STUDENT` | Chỉ xem dữ liệu cá nhân |
 
-## 10. Module ưu tiên 2 tuần
+> **Nguyên tắc quan trọng:** GVCN và GVBM không phải role riêng. Đều là `TEACHER`, phân biệt qua `TeacherAssignment.assignmentType = HOMEROOM | SUBJECT`. Backend phải kiểm tra scope theo assignment, không chỉ check role.
 
-Thứ tự hiện thực:
+## 10. Nguyên tắc transaction
 
-1. Auth.
-2. Seed data.
-3. Students.
-4. Classes + Enrollment.
-5. Scores.
-6. Lookup.
-7. Reports.
-8. Users/Permissions đơn giản.
-9. Docs + QA.
+Dùng Prisma transaction cho:
 
-## 11. Nguyên tắc transaction
+- Phân lớp/chuyển lớp (cập nhật enrollment + currentSize hai lớp).
+- Duyệt yêu cầu sửa điểm (cập nhật điểm + tính lại averageScore).
+- Chốt kết quả học kỳ (tính + lưu SemesterStudentResult).
+- Tổng kết năm học (tính + lưu YearEndResult).
 
-Nên dùng transaction cho các nghiệp vụ:
+## 11. Xử lý lỗi thống nhất
 
-- Thêm học sinh vào lớp và cập nhật sĩ số.
-- Lưu bảng điểm gồm nhiều học sinh/nhiều điểm chi tiết.
-- Chỉnh sửa điểm và tính lại trung bình.
-- Thay đổi tham số có ghi log.
-
-## 12. Nguyên tắc lỗi
-
-Backend trả lỗi thống nhất:
+Backend trả lỗi qua NestJS exception filters:
 
 ```json
-{
-  "statusCode": 400,
-  "message": "Tuổi học sinh không nằm trong khoảng cho phép",
-  "error": "Bad Request"
-}
+{ "statusCode": 400, "message": "Tuổi học sinh không nằm trong khoảng cho phép", "error": "Bad Request" }
 ```
 
-Frontend không hiển thị lỗi kỹ thuật thô cho người dùng cuối.
+Business error keys (dùng trong service):
+- `STUDENT_NOT_FOUND`, `CLASS_FULL`, `NOT_SUBJECT_TEACHER`, `SCORE_SHEET_LOCKED`, ...
+
+Frontend không hiển thị lỗi kỹ thuật thô — bắt `errorKey` hoặc `message` để hiển thị thân thiện.
+
+## 12. Phân quyền scope GVCN/GVBM (quan trọng)
+
+`PermissionScopeService` cung cấp các hàm kiểm tra:
+
+```ts
+isHomeroomTeacherOfClass(teacherId, classId, schoolYearId) → boolean
+isSubjectTeacherOfClass(teacherId, classId, subjectId, semesterId) → boolean
+canEditSubjectScore(user, classId, subjectId, semesterId, status)
+canLockScoreSheet(user)           // → chỉ ACADEMIC_STAFF
+canApproveScoreChangeRequest(user) // → chỉ ACADEMIC_STAFF
+```
+
+`StudentsService`, `ClassesService`, `ScoresService` đều dùng service này để tránh lặp logic.

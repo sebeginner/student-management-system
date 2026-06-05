@@ -13,6 +13,9 @@ Endpoint: `POST /api/v1/auth/login`
 | TC03 | BGH đăng nhập đúng | username: `manager01`, password: `Manager@123` | 200, có `token`, role = `MANAGER` |
 | TC04 | Giáo viên 1 đăng nhập đúng | username: `teacher01`, password: `Teacher@123` | 200, có `token`, role = `TEACHER` |
 | TC05 | Giáo viên 2 đăng nhập đúng | username: `teacher02`, password: `Teacher@123` | 200, có `token`, role = `TEACHER` |
+| TC05b | Giáo viên 3 đăng nhập đúng | username: `teacher03`, password: `Teacher@123` | 200, có `token`, role = `TEACHER` |
+| TC05c | Giáo viên 4 đăng nhập đúng | username: `teacher04`, password: `Teacher@123` | 200, có `token`, role = `TEACHER` |
+| TC05d | Giáo viên 5 đăng nhập đúng | username: `teacher05`, password: `Teacher@123` | 200, có `token`, role = `TEACHER` |
 | TC06 | Học sinh đăng nhập đúng | username: `student01`, password: `Student@123` | 200, có `token`, role = `STUDENT` |
 
 ---

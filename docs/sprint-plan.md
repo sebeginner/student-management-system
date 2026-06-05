@@ -1,4 +1,6 @@
-# Sprint Plan - Kế hoạch 2 tuần cho nhóm 3 người
+# Sprint Plan — Kế hoạch 2 tuần cho nhóm 3 người
+
+> **Ghi chú:** Đây là kế hoạch sprint ban đầu. Thực tế đã hoàn thành nhiều hơn (import Excel, PDF export, hạnh kiểm, thời khóa biểu, chốt kết quả HK/năm, audit log). Xem `docs/srs.md` để biết danh sách chức năng đã implement đầy đủ.
 
 ## 1. Mục tiêu sprint
 

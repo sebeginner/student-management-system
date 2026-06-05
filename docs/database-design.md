@@ -1,69 +1,74 @@
-# Database Design - Thiết kế dữ liệu hệ thống Quản lý học sinh
+# Database Design — Thiết kế dữ liệu hệ thống Quản lý học sinh SE104
 
-Tài liệu này mô tả thiết kế dữ liệu mức logic, bám theo `backend/prisma/schema.prisma`.
+Tài liệu này mô tả thiết kế dữ liệu logic, bám theo `backend/prisma/schema.prisma`.
 
-## 1. Nhóm bảng tài khoản và phân quyền
+---
+
+## 1. Nhóm 1 — Tài khoản và phân quyền
 
 | Model | Table | Mục đích |
 |---|---|---|
-| `Role` | `roles` | Lưu vai trò người dùng: ADMIN, ACADEMIC_STAFF, MANAGER, TEACHER, STUDENT |
-| `Permission` | `permissions` | Lưu quyền thao tác |
-| `RolePermission` | `role_permissions` | Bảng trung gian role - permission |
-| `User` | `users` | Lưu tài khoản đăng nhập |
-| `AuditLog` | `audit_logs` | Lưu nhật ký thao tác quan trọng |
+| `Role` | `roles` | Vai trò: ADMIN, ACADEMIC_STAFF, MANAGER, TEACHER, STUDENT |
+| `Permission` | `permissions` | Quyền thao tác cụ thể |
+| `RolePermission` | `role_permissions` | Bảng trung gian role ↔ permission |
+| `User` | `users` | Tài khoản đăng nhập |
+| `AuditLog` | `audit_logs` | Nhật ký thao tác quan trọng |
 
 ### User
 
-Trường chính:
+Trường chính: `id`, `username` (unique), `email` (unique), `passwordHash`, `fullName`, `status`, `roleId`, `studentId` (unique, nullable), `teacherId` (unique, nullable).
 
-- `id`
-- `username`
-- `email`
-- `passwordHash`
-- `fullName`
-- `status`
-- `roleId`
-- `studentId`
-- `teacherId`
+Quan hệ: User thuộc một Role; có thể liên kết với `Student` hoặc `Teacher`.
 
-Quan hệ:
+---
 
-- User thuộc một Role.
-- User có thể liên kết với Student hoặc Teacher.
-
-## 2. Nhóm bảng học vụ
+## 2. Nhóm 2 — Quản lý học vụ
 
 | Model | Table | Mục đích |
 |---|---|---|
 | `Student` | `students` | Hồ sơ học sinh |
-| `Teacher` | `teachers` | Hồ sơ giáo viên |
+| `Teacher` | `teachers` | Hồ sơ giáo viên (có trường `subjectId` — chuyên môn) |
 | `SchoolYear` | `school_years` | Năm học |
-| `Semester` | `semesters` | Học kỳ |
-| `GradeLevel` | `grade_levels` | Khối lớp |
-| `Class` | `classes` | Lớp học |
-| `StudentClassEnrollment` | `student_class_enrollments` | Phân học sinh vào lớp theo học kỳ |
+| `Semester` | `semesters` | Học kỳ (gắn với `SchoolYear`) |
+| `GradeLevel` | `grade_levels` | Khối lớp (10, 11, 12) |
+| `Class` | `classes` | Lớp học theo năm học |
+| `StudentClassEnrollment` | `student_class_enrollments` | Học sinh thuộc lớp nào trong học kỳ nào |
 | `Subject` | `subjects` | Môn học |
-| `TeacherAssignment` | `teacher_assignments` | Phân công GVCN/GVBM cho giáo viên |
+| `TeacherAssignment` | `teacher_assignments` | Phân công GVCN hoặc GVBM |
 
-`TeacherAssignment.assignmentType` dùng enum `TeacherAssignmentType = HOMEROOM | SUBJECT`.
-`HOMEROOM` có `subjectId = null`, `semesterId = null`, gắn với `schoolYearId`.
-`SUBJECT` bắt buộc có `subjectId`, `semesterId`, `schoolYearId`.
-`isActive` dùng để khóa phạm vi unique cho phân công hiện hành mà vẫn giữ lịch sử.
+### TeacherAssignment
 
-## 3. Nhóm bảng điểm
+Enum `TeacherAssignmentType`:
+
+| Loại | subjectId | semesterId | Ý nghĩa |
+|---|---|---|---|
+| `HOMEROOM` | `null` | `null` | GVCN — áp dụng cả năm học |
+| `SUBJECT` | bắt buộc | bắt buộc | GVBM — gắn với lớp/môn/học kỳ |
+
+`isActive` dùng để phân biệt phân công hiện hành với lịch sử (không xóa cứng).
+
+### GradeLevel
+
+Trường `level` có ràng buộc `@unique` — đảm bảo không có hai khối trùng số (ví dụ không thể có hai khối 10).
+
+---
+
+## 3. Nhóm 3 — Điểm số
 
 | Model | Table | Mục đích |
 |---|---|---|
-| `TestType` | `test_types` | Loại hình kiểm tra: miệng, 1 tiết, giữa kỳ, cuối kỳ |
-| `ScoreWeight` | `score_weights` | Hệ số điểm theo năm học |
-| `ScoreSheet` | `score_sheets` | Bảng điểm của một lớp - môn - học kỳ |
-| `StudentSubjectScore` | `student_subject_scores` | Điểm tổng hợp của từng học sinh trong bảng điểm |
-| `ScoreDetail` | `score_details` | Điểm chi tiết theo loại kiểm tra/lần kiểm tra |
-| `ScoreChangeRequest` | `score_change_requests` | Yêu cầu sửa điểm sau khi bảng điểm đã khóa |
+| `TestType` | `test_types` | Loại kiểm tra: ORAL_15M, ONE_PERIOD, MIDTERM, FINAL |
+| `ScoreWeight` | `score_weights` | Hệ số điểm theo năm học (dùng để override mặc định) |
+| `ScoreSheet` | `score_sheets` | Bảng điểm của một lớp–môn–học kỳ |
+| `StudentSubjectScore` | `student_subject_scores` | Điểm tổng hợp của học sinh trong bảng điểm |
+| `ScoreDetail` | `score_details` | Điểm chi tiết từng lần kiểm tra |
+| `ScoreChangeRequest` | `score_change_requests` | Yêu cầu sửa điểm sau khi bảng điểm LOCKED |
 
-`ScoreSheet.status` dùng enum `ScoreSheetStatus = DRAFT | SUBMITTED | LOCKED | NEEDS_CORRECTION`.
+`ScoreSheet.status` dùng enum `ScoreSheetStatus`: `DRAFT | SUBMITTED | LOCKED | NEEDS_CORRECTION`.
 
-## 4. Nhóm bảng báo cáo
+---
+
+## 4. Nhóm 4 — Báo cáo tổng kết
 
 | Model | Table | Mục đích |
 |---|---|---|
@@ -72,28 +77,114 @@ Quan hệ:
 | `SemesterReport` | `semester_reports` | Báo cáo tổng kết học kỳ |
 | `SemesterReportDetail` | `semester_report_details` | Chi tiết báo cáo học kỳ theo lớp |
 
-Trong MVP, báo cáo có thể tính động bằng query thay vì bắt buộc lưu vào các bảng report.
+Trong MVP, báo cáo có thể tính động bằng query thay vì bắt buộc lưu vào các bảng này.
 
-## 5. Nhóm bảng tham số hệ thống
+---
+
+## 5. Nhóm 5 — Tham số hệ thống
 
 | Model | Table | Mục đích |
 |---|---|---|
-| `SystemParameter` | `system_parameters` | Lưu tham số tuổi, sĩ số, điểm, điểm đạt theo năm học |
+| `SystemParameter` | `system_parameters` | Tham số tuổi, sĩ số, điểm, điểm đạt theo năm học |
 
-Trường chính:
+Trường chính: `schoolYearId` (unique — mỗi năm học một bộ tham số), `minAge`, `maxAge`, `maxClassSize`, `minScore`, `maxScore`, `subjectPassScore`, `semesterPassScore`, `effectiveFrom`, `effectiveTo`.
 
-- `schoolYearId`
-- `minAge`
-- `maxAge`
-- `maxClassSize`
-- `minScore`
-- `maxScore`
-- `subjectPassScore`
-- `semesterPassScore`
-- `effectiveFrom`
-- `effectiveTo`
+---
 
-## 6. Ràng buộc quan trọng
+## 6. Nhóm 6 — Kết quả học kỳ và tổng kết năm (UC2)
+
+| Model | Table | Mục đích |
+|---|---|---|
+| `SemesterStudentResult` | `semester_student_results` | Kết quả học kỳ đã chốt của học sinh |
+| `YearEndResult` | `year_end_results` | Kết quả tổng kết năm và quyết định lên lớp |
+
+### SemesterStudentResult
+
+Trường chính: `studentId`, `semesterId`, `classId`, `semesterAverage`, `academicRating` (EXCELLENT/GOOD/AVERAGE/WEAK/POOR), `subjectCount`, `failedSubjectCount`, `finalizedAt`, `finalizedById`.
+
+Unique: `[studentId, semesterId]`.
+
+### YearEndResult
+
+Trường chính: `studentId`, `schoolYearId`, `classId`, `hk1Average`, `hk2Average`, `yearAverage`, `academicRating`, `conductRating`, `decision` (ADVANCE/REMEDIAL/CONDUCT_REVIEW/RETAIN), `decisionNote`.
+
+Unique: `[studentId, schoolYearId]`.
+
+---
+
+## 7. Nhóm 7 — Hạnh kiểm (UC1)
+
+| Model | Table | Mục đích |
+|---|---|---|
+| `ConductAssessment` | `conduct_assessments` | Phiếu hạnh kiểm của học sinh theo học kỳ |
+| `ConductCriterion` | `conduct_criteria` | Chi tiết đánh giá từng tiêu chí |
+
+### ConductAssessment
+
+Trường chính: `studentId`, `semesterId`, `classId`, `status` (DRAFT/SUBMITTED/FINALIZED), `finalRating` (EXCELLENT/GOOD/AVERAGE/WEAK), `teacherNote`, `reviewNote`, `submittedById`, `reviewedById`.
+
+Unique: `[studentId, semesterId]`.
+
+### ConductCriterion
+
+`code`: `ATTENDANCE | DISCIPLINE | ACADEMIC | ACTIVITIES`  
+`rating`: `EXCELLENT | GOOD | AVERAGE | WEAK`
+
+---
+
+## 8. Nhóm 8 — Thời khóa biểu (UC5)
+
+| Model | Table | Mục đích |
+|---|---|---|
+| `TimetableSlot` | `timetable_slots` | Một tiết học trong thời khóa biểu |
+
+Trường chính: `semesterId`, `classId`, `subjectId`, `teacherId`, `dayOfWeek` (1=T2…6=T7), `period` (1–5), `room`.
+
+Ràng buộc unique:
+- `(semesterId, classId, dayOfWeek, period)` — tên `unique_class_slot`: một lớp không có hai môn cùng tiết.
+- `(semesterId, teacherId, dayOfWeek, period)` — tên `unique_teacher_slot`: một GV không dạy hai lớp cùng tiết.
+
+---
+
+## 9. Nhóm 9 — Thông báo (UC-22)
+
+| Model | Table | Mục đích |
+|---|---|---|
+| `Notification` | `notifications` | Nội dung thông báo kèm phạm vi gửi |
+| `NotificationRead` | `notification_reads` | Theo dõi trạng thái đã đọc của từng người dùng |
+
+### Notification
+
+Trường chính: `id`, `title`, `content` (Text), `targetRole` (nullable — null = broadcast), `classId` (nullable — null = không giới hạn lớp), `createdById` (FK → User), `createdAt`, `updatedAt`.
+
+Phạm vi hiển thị theo kết hợp `targetRole` và `classId`:
+
+| targetRole | classId | Ai thấy |
+|---|---|---|
+| null | null | Tất cả |
+| `STUDENT` | null | Chỉ học sinh |
+| `STUDENT` | N | Chỉ học sinh của lớp N |
+| `TEACHER` | null | Chỉ giáo viên |
+
+### NotificationRead
+
+Trường chính: `notificationId` (FK), `userId` (FK), `readAt`.
+
+Unique: `[notificationId, userId]` — một người chỉ đọc mỗi thông báo một lần.
+
+`onDelete: Cascade` — xoá thông báo → tự xoá tất cả bản ghi đã đọc liên quan.
+
+### Quan hệ với User và Class
+
+`User` có hai relation mới:
+- `createdNotifications Notification[]` (`@relation("NotificationCreator")`)
+- `notificationReads NotificationRead[]` (`@relation("NotificationReads")`)
+
+`Class` có thêm `notifications Notification[]`.
+
+---
+
+## 10. Ràng buộc quan trọng
 
 | Ràng buộc | Ý nghĩa |
 |---|---|
@@ -101,43 +192,60 @@ Trường chính:
 | `Teacher.teacherCode` unique | Không trùng mã giáo viên |
 | `User.username` unique | Không trùng tên đăng nhập |
 | `User.email` unique | Không trùng email |
+| `GradeLevel.level` unique | Không trùng số khối (10, 11, 12) |
 | `Class.classCode` unique | Không trùng mã lớp |
 | `Class(schoolYearId, name)` unique | Không trùng tên lớp trong cùng năm học |
-| `Semester(schoolYearId, name)` unique | Không trùng học kỳ trong cùng năm học |
-| `StudentClassEnrollment(studentId, semesterId)` unique | Một học sinh chỉ thuộc một lớp trong một học kỳ |
-| `TeacherAssignment` partial unique indexes | Một lớp chỉ có một GVCN active trong một năm học; một lớp/môn/học kỳ chỉ có một GVBM chính active |
-| `ScoreSheet(classId, subjectId, semesterId)` unique | Một lớp chỉ có một bảng điểm cho một môn/học kỳ |
-| `StudentSubjectScore(scoreSheetId, studentId)` unique | Mỗi học sinh chỉ có một dòng điểm trong bảng điểm |
-| `ScoreDetail(studentSubjectScoreId, testTypeId, attemptNo)` unique | Tránh trùng điểm cùng loại/lần |
-| `ScoreChangeRequest` pending unique index | Không tạo hai yêu cầu chờ duyệt cho cùng học sinh/môn/loại điểm/lần kiểm tra |
+| `Semester(schoolYearId, name)` unique | Không trùng tên học kỳ trong cùng năm học |
+| `StudentClassEnrollment`: index `[studentId, semesterId, status]` | Dùng để kiểm tra unique enrollment active |
+| `TeacherAssignment` partial unique indexes | Một lớp chỉ có một GVCN; một lớp/môn/HK chỉ có một GVBM |
+| `ScoreSheet(classId, subjectId, semesterId)` unique | Mỗi lớp một bảng điểm cho mỗi môn/HK |
+| `StudentSubjectScore(scoreSheetId, studentId)` unique | Mỗi HS một dòng điểm trong bảng |
+| `ScoreDetail(studentSubjectScoreId, testTypeId, attemptNo)` unique | Không trùng điểm cùng loại/lần |
+| `ConductAssessment(studentId, semesterId)` unique | Mỗi HS một phiếu hạnh kiểm/HK |
+| `SemesterStudentResult(studentId, semesterId)` unique | Mỗi HS một kết quả HK |
+| `YearEndResult(studentId, schoolYearId)` unique | Mỗi HS một kết quả năm |
+| `TimetableSlot unique_class_slot` | Mỗi lớp không trùng tiết học |
+| `TimetableSlot unique_teacher_slot` | Mỗi GV không trùng tiết dạy |
 
-## 7. Mapping nghiệp vụ sang dữ liệu
+---
 
-| Nghiệp vụ | Bảng liên quan |
+## 10. Mapping nghiệp vụ sang dữ liệu
+
+| Nghiệp vụ | Bảng chính liên quan |
 |---|---|
-| Đăng nhập | `users`, `roles`, `permissions` |
+| Đăng nhập | `users`, `roles` |
 | Tiếp nhận học sinh | `students`, `system_parameters` |
-| Lập danh sách lớp | `classes`, `students`, `student_class_enrollments`, `semesters` |
-| Phân công GVCN/GVBM | `teacher_assignments`, `teachers`, `classes`, `subjects`, `semesters` |
-| Nhập điểm | `score_sheets`, `student_subject_scores`, `score_details`, `test_types`, `score_weights` |
-| Yêu cầu sửa điểm | `score_change_requests`, `score_sheets`, `student_subject_scores`, `score_details`, `users` |
-| Tra cứu điểm | `students`, `score_sheets`, `student_subject_scores`, `score_details`, `subjects`, `semesters` |
-| Báo cáo môn | `score_sheets`, `student_subject_scores`, `classes`, `subjects`, `system_parameters` |
-| Báo cáo học kỳ | `student_class_enrollments`, `student_subject_scores`, `classes`, `semesters`, `system_parameters` |
-| Thay đổi quy định | `system_parameters`, `subjects`, `grade_levels`, `classes`, `semesters` |
+| Phân lớp / chuyển lớp | `student_class_enrollments`, `classes`, `semesters` |
+| Phân công GVCN/GVBM | `teacher_assignments`, `teachers`, `subjects`, `semesters` |
+| Nhập điểm | `score_sheets`, `student_subject_scores`, `score_details`, `test_types` |
+| Yêu cầu sửa điểm | `score_change_requests`, `score_sheets`, `student_subject_scores` |
+| Tra cứu điểm | `student_subject_scores`, `score_details`, `score_sheets` |
+| Báo cáo môn | `subject_report_details`, `student_subject_scores` |
+| Báo cáo học kỳ | `semester_student_results`, `classes` |
+| Tổng kết năm học | `year_end_results`, `semester_student_results` |
+| Hạnh kiểm | `conduct_assessments`, `conduct_criteria` |
+| Thời khóa biểu | `timetable_slots`, `teacher_assignments` |
+| Nhật ký | `audit_logs`, `users` |
+| Tham số | `system_parameters`, `school_years` |
 
-## 8. Dữ liệu seed tối thiểu
+---
 
-Cần seed ít nhất:
+## 11. Dữ liệu seed thực tế
 
-- Roles: ADMIN, ACADEMIC_STAFF, MANAGER, TEACHER, STUDENT.
-- Users demo: admin, giaovu01, manager01, teacher01, teacher02, student01 đến student05.
-- SchoolYear: 2025-2026.
-- Semesters: HK1, HK2.
-- GradeLevels: 10.
-- Classes: 10A1.
-- Subjects: Toan, Van.
-- TestTypes: ORAL_15M, ONE_PERIOD, MIDTERM, FINAL.
-- SystemParameter: minAge 15, maxAge 20, maxClassSize 40, minScore 0, maxScore 10, subjectPassScore 5, semesterPassScore 5.
-- TeacherAssignment: teacher01 là GVCN 10A1 và GVBM Toán 10A1 HK1; teacher02 là GVBM Văn 10A1 HK1.
-- ScoreSheet: bảng điểm Toán và Văn cho lớp 10A1 HK1, đủ điểm mẫu cho 5 học sinh.
+| Loại | Dữ liệu |
+|---|---|
+| Roles | ADMIN, ACADEMIC_STAFF, MANAGER, TEACHER, STUDENT |
+| Users | admin, giaovu01, manager01, teacher01–05, student01–07 (student06 chờ lớp) |
+| SchoolYear | `2025-2026` (isActive=true) |
+| Semesters | HK1 (isActive=false), HK2 (isActive=true) |
+| GradeLevels | 10, 11, 12 |
+| Classes | 10A1(20hs), 10A2(15hs), 11A1(15hs), 11A2(12hs, chưa có GVCN), 12A1(8hs) |
+| Subjects | Toán(MATH), Ngữ văn(LIT), Tiếng Anh(ENG), Vật lý(PHY), Hóa học(CHEM) |
+| TestTypes | ORAL_15M(×1), ONE_PERIOD(×2), MIDTERM(×3), FINAL(×3) |
+| SystemParameter | minAge=15, maxAge=20, maxClassSize=40, minScore=0, maxScore=10, subjectPassScore=5, semesterPassScore=5 |
+| TeacherAssignments | HOMEROOM: T001→10A1, T002→10A2, T003→11A1, T004→12A1. SUBJECT: xem seed.ts §12 |
+| ScoreSheets | HK1: nhiều LOCKED/SUBMITTED/DRAFT; HK2: 2 DRAFT |
+| ScoreChangeRequests | 1 PENDING, 1 APPROVED |
+| SemesterStudentResult | Đã chốt HK1 cho lớp 10A1 |
+| ConductAssessments | 5 FINALIZED + 3 SUBMITTED cho lớp 10A1 HK1 |
+| TimetableSlots | 11 tiết lớp 10A1 HK2 |

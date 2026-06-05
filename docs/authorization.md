@@ -1,66 +1,114 @@
-# Authorization and permission scope
+# Authorization — Phân quyền hệ thống SE104
 
-Backend dung `PermissionScopeService` tai `backend/src/authorization/permission-scope.service.ts` de gom logic phan quyen theo scope du lieu.
+Tài liệu này mô tả nguyên tắc phân quyền và phạm vi truy cập của từng role, dựa trên `backend/src/` và quy tắc nghiệp vụ trong `AGENTS.md`.
 
-## Nguyen tac role
+---
 
-- `ADMIN`: duoc bypass trong dev/demo, nhung khong phai actor nghiep vu hoc vu chinh.
-- `ACADEMIC_STAFF`: xem va thao tac hoc vu toan truong, duoc khoa bang diem va duyet yeu cau sua diem.
-- `MANAGER`: xem du lieu/bao cao toan truong, khong nhap/sua diem.
-- `TEACHER`: quyen phu thuoc `TeacherAssignment`.
-- `STUDENT`: chi xem du lieu cua chinh minh.
+## 1. Nguyên tắc phân quyền
 
-## Ma tran quyen demo P0
+- Backend dùng `JwtAuthGuard` + `RolesGuard` để bảo vệ tất cả endpoint.
+- Mọi endpoint nghiệp vụ yêu cầu JWT hợp lệ.
+- `TEACHER` cần kiểm tra thêm scope theo `TeacherAssignment` (không chỉ check role).
+- `STUDENT` chỉ truy cập dữ liệu của chính mình.
+- Frontend ẩn menu theo role là UX tốt, nhưng **backend bắt buộc phải enforce**.
 
-### Admin
+---
 
-- Quan tri ky thuat, tai khoan, role va cau hinh he thong.
-- Duoc bypass trong moi truong dev/demo neu can go loi.
-- Khong duoc xem la actor chinh cho nghiep vu hoc vu hang ngay.
+## 2. GVCN và GVBM — không phải role riêng
 
-### Giao vu (`ACADEMIC_STAFF`)
+Đây là nguyên tắc bắt buộc của hệ thống:
 
-- Quan ly hoc sinh, lop, nam hoc, hoc ky, khoi, mon hoc va giao vien.
-- Phan lop, chuyen lop va phan cong GVCN/GVBM.
-- Xem toan truong, tao/sua du lieu hoc vu, khoa bang diem.
-- Duyet hoac tu choi yeu cau sua diem sau khi bang diem da khoa.
+| Khái niệm | Cách model trong code |
+|---|---|
+| GVCN (Giáo viên chủ nhiệm) | `TEACHER` có `TeacherAssignment.assignmentType = HOMEROOM` |
+| GVBM (Giáo viên bộ môn) | `TEACHER` có `TeacherAssignment.assignmentType = SUBJECT` |
 
-### BGH/Manager (`MANAGER`)
+Một giáo viên có thể vừa là GVCN vừa là GVBM. Quyền được cộng dồn theo các assignment **active** tại thời điểm gọi API, nhưng không vượt phạm vi từng assignment.
 
-- Xem du lieu va bao cao toan truong.
-- Giam sat dashboard, tong ket lop, tong ket mon va tong ket hoc sinh.
-- Khong nhap diem, khong sua diem, khong phan lop/chuyen lop.
+---
 
-### GVCN
+## 3. Ma trận quyền theo role
 
-- La `TEACHER` co `TeacherAssignment` loai `HOMEROOM`.
-- Xem danh sach hoc sinh, ho so, diem va bao cao cua lop chu nhiem.
-- Khong nhap/sua diem neu khong dong thoi co assignment `SUBJECT` dung lop/mon/hoc ky.
+### ADMIN
 
-### GVBM
+- Quản lý tài khoản (`/users`): CRUD, reset password.
+- Quản lý role/permission.
+- Xem nhật ký hệ thống (`/audit-logs`).
+- Xem và cập nhật tham số hệ thống (`/system-parameters`).
+- Tạo thông báo (không giới hạn scope); xoá bất kỳ thông báo nào.
+- Bypass dev: ADMIN có thể xem hầu hết dữ liệu để debug, nhưng **không phải actor nghiệp vụ học vụ**.
 
-- La `TEACHER` co `TeacherAssignment` loai `SUBJECT`.
-- Xem danh sach hoc sinh cua lop minh day.
-- Nhap/sua diem dung lop/mon/hoc ky khi bang diem chua `LOCKED`.
-- Submit bang diem va gui yeu cau sua diem khi bang diem da `LOCKED`.
-- Khong khoa bang diem va khong duyet yeu cau sua diem.
+### Giáo vụ (`ACADEMIC_STAFF`)
 
-### Hoc sinh (`STUDENT`)
+- Quản lý học sinh: CRUD, phân lớp, chuyển lớp.
+- Quản lý lớp, năm học, học kỳ, khối, môn học, giáo viên.
+- Phân công GVCN/GVBM (`/teacher-assignments`).
+- Tạo và xem bảng điểm toàn trường.
+- **Khóa bảng điểm** (`POST /scores/sheets/:id/lock`) — chỉ role này được phép theo business rule.
+- **Duyệt / từ chối yêu cầu sửa điểm** (`approve`, `reject`) — chỉ role này được phép theo business rule.
+- Chốt kết quả học kỳ (`POST /semesters/:id/finalize`).
+- Tổng kết năm học (`POST /school-years/:id/year-end`).
+- Chốt hạnh kiểm (`POST /conduct-assessments/:id/finalize`).
+- Xem tất cả báo cáo toàn trường.
+- Import học sinh, import điểm.
+- Quản lý thời khóa biểu.
+- Xem nhật ký hệ thống.
+- Tạo thông báo (toàn trường hoặc theo role, không giới hạn `classId`); xoá bất kỳ thông báo nào.
 
-- Chi xem ho so, diem va bao cao hoc ky cua chinh minh.
-- Khong xem diem/hoc sinh/lop cua nguoi khac.
+### BGH / Manager (`MANAGER`)
 
-## GVCN/GVBM
+- Xem dữ liệu và báo cáo toàn trường (read-only).
+- Xem dashboard summary.
+- Xem danh sách học sinh, lớp, giáo viên, phân công.
+- Xem tham số hệ thống (không sửa).
+- Tạo thông báo (toàn trường hoặc theo role); không xoá thông báo của người khác.
+- **Không** nhập điểm, không phân lớp, không chuyển lớp, không khóa bảng điểm.
 
-`TEACHER` la role tai khoan chung. GVCN va GVBM khong phai role dang nhap rieng.
+### TEACHER (vai trò thay đổi theo TeacherAssignment)
 
-- GVCN: `TeacherAssignment.assignmentType = HOMEROOM`.
-- GVBM: `TeacherAssignment.assignmentType = SUBJECT`.
-- Mot giao vien co the vua la GVCN vua la GVBM.
+**Quyền chung của TEACHER:**
 
-## PermissionScopeService
+- Xem thời khóa biểu cá nhân (`GET /timetable/my`).
+- Xem danh sách phân công của mình (`GET /me/teacher-assignments`).
+- Xem yêu cầu sửa điểm do mình gửi.
+- Xem hồ sơ học sinh thuộc lớp mình liên quan.
+- Tạo thông báo **chỉ đến lớp mình được phân công** (HOMEROOM hoặc SUBJECT); `classId` bắt buộc, backend kiểm tra `TeacherAssignment`; thông báo luôn gửi đến `targetRole = STUDENT`.
 
-Service hien co cac ham:
+**GVCN (HOMEROOM):**
+
+- Xem danh sách học sinh lớp chủ nhiệm.
+- Xem hồ sơ học sinh lớp chủ nhiệm.
+- Xem tất cả bảng điểm của lớp chủ nhiệm (bao gồm môn không dạy).
+- Xem báo cáo lớp chủ nhiệm.
+- Tạo và nộp hạnh kiểm lớp chủ nhiệm.
+- **Không khóa bảng điểm**, không duyệt yêu cầu sửa điểm.
+- **Không nhập/sửa điểm** nếu không đồng thời là GVBM của môn đó.
+
+**GVBM (SUBJECT):**
+
+- Xem học sinh lớp/môn được phân công.
+- Nhập/sửa điểm đúng lớp/môn/học kỳ khi bảng điểm còn `DRAFT` hoặc `SUBMITTED`.
+- Submit bảng điểm (`POST /scores/sheets/:id/submit`).
+- Tạo yêu cầu sửa điểm khi bảng điểm đã `LOCKED`.
+- Xem báo cáo môn mình dạy.
+- **Không** xem/sửa điểm môn khác.
+- **Không khóa bảng điểm**, không duyệt yêu cầu sửa điểm.
+
+### STUDENT
+
+- Chỉ xem hồ sơ của chính mình (`GET /students/:id` — backend kiểm tra).
+- Xem điểm cá nhân (`GET /scores/my-scores`).
+- Xem báo cáo học kỳ cá nhân (`GET /reports/student-semester/:studentId`).
+- Xem thời khóa biểu cá nhân (`GET /timetable/my`).
+- Tải phiếu điểm PDF (`GET /reports/student-transcript/:studentId/pdf`).
+- Xem thông báo toàn trường, thông báo đúng role, thông báo lớp đang theo học.
+- **Không** xem dữ liệu của học sinh khác; **không** tạo thông báo.
+
+---
+
+## 4. PermissionScopeService
+
+Backend tập trung logic kiểm tra quyền theo scope tại `backend/src/authorization/permission-scope.service.ts`:
 
 ```ts
 canViewClassStudents(user, classId)
@@ -69,8 +117,8 @@ canViewStudentScores(user, studentId)
 canViewClassScores(user, classId)
 canEditSubjectScore(user, classId, subjectId, semesterId, scoreSheetStatus)
 canSubmitScoreSheet(user, classId, subjectId, semesterId)
-canLockScoreSheet(user)
-canApproveScoreChangeRequest(user)
+canLockScoreSheet(user)          // → chỉ ACADEMIC_STAFF
+canApproveScoreChangeRequest(user) // → chỉ ACADEMIC_STAFF
 canViewScoreChangeRequest(user, requestId)
 
 isHomeroomTeacherOfClass(teacherId, classId, schoolYearId)
@@ -78,28 +126,41 @@ isSubjectTeacherOfClass(teacherId, classId, subjectId, semesterId)
 getTeacherByUserId(userId)
 ```
 
-Ngoai ra co helper query scope:
+Helper query scope:
 
 ```ts
 classScopeWhereForUser(user)
 studentScopeWhereForUser(user, requestedClassId?)
 ```
 
-`StudentsService` va `ClassesService` da dung cac helper nay de tranh lap logic check assignment.
+---
 
-## Loi phan quyen
+## 5. Bảng điểm và yêu cầu sửa điểm
 
-Cac ham `can...` tra `true` neu duoc phep, neu khong se nem `ForbiddenException` voi `errorKey`:
+| Thao tác | Role được phép | Ghi chú |
+|---|---|---|
+| Tạo bảng điểm | `ACADEMIC_STAFF`, `TEACHER` | TEACHER phải có SUBJECT assignment đúng lớp/môn/HK |
+| Nhập/sửa điểm | `ACADEMIC_STAFF`, `TEACHER` | TEACHER chỉ trong phạm vi SUBJECT assignment; không sửa khi LOCKED |
+| Submit bảng điểm | `ACADEMIC_STAFF`, `TEACHER` | Bảng điểm phải đủ MIDTERM + FINAL |
+| **Khóa bảng điểm** | **`ACADEMIC_STAFF`** | Business rule: chỉ Giáo vụ được khóa |
+| Unlock | `ACADEMIC_STAFF` | Trường hợp ngoại lệ — không phải workflow thông thường |
+| Tạo yêu cầu sửa điểm | `TEACHER` | Bắt buộc bảng điểm LOCKED + có SUBJECT assignment đúng |
+| **Duyệt / từ chối SCR** | **`ACADEMIC_STAFF`** | Business rule: chỉ Giáo vụ được duyệt |
 
-- `FORBIDDEN`
-- `NOT_HOMEROOM_TEACHER`
-- `NOT_SUBJECT_TEACHER`
-- `NOT_STUDENT_OWNER`
-- `SCORE_SHEET_LOCKED`
+> **Chú ý triển khai:** Controller hiện tại có `@Roles('ACADEMIC_STAFF', 'TEACHER')` cho `lock` và `approve`/`reject`. Tuy nhiên, service bên trong (`canLockScoreSheet`, `canApproveScoreChangeRequest`) phải enforce thêm điều kiện chỉ ACADEMIC_STAFF được thực hiện. Business rule theo AGENTS.md là nguồn sự thật cho phân quyền này.
 
-## Bang diem
+---
 
-- GVBM chi duoc nhap/sua diem dung lop/mon/hoc ky duoc phan cong.
-- Neu bang diem `LOCKED`, GVBM khong duoc sua truc tiep.
-- `ACADEMIC_STAFF` khong nen sua diem truc tiep khi bang diem da khoa; uu tien quy trinh score change request.
-- Khoa bang diem va duyet yeu cau sua diem chi danh cho `ACADEMIC_STAFF` trong demo, `ADMIN` co bypass dev.
+## 6. Lỗi phân quyền
+
+Các hàm `can...` trong `PermissionScopeService` ném `ForbiddenException` với errorKey:
+
+| errorKey | Ý nghĩa |
+|---|---|
+| `FORBIDDEN` | Không có quyền chung |
+| `NOT_HOMEROOM_TEACHER` | Không phải GVCN của lớp |
+| `NOT_SUBJECT_TEACHER` | Không phải GVBM của lớp/môn/HK này |
+| `NOT_STUDENT_OWNER` | Student đang cố xem dữ liệu của người khác |
+| `SCORE_SHEET_LOCKED` | Bảng điểm đã khóa, không sửa trực tiếp |
+| `ONLY_ACADEMIC_STAFF_CAN_APPROVE` | Chỉ Giáo vụ được duyệt/từ chối SCR |
+| `NOT_ASSIGNED_TO_CLASS` | TEACHER gửi thông báo đến lớp không được phân công |

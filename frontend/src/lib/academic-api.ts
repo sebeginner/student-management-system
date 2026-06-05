@@ -10,15 +10,73 @@ export interface SchoolYear {
   name: string;
   startYear: number;
   endYear: number;
+  startDate: string;
+  endDate: string;
   isActive: boolean;
+  _count?: { semesters: number; classes: number; assignments: number };
+}
+
+export interface AcademicYearPayload {
+  name: string;
+  startYear: number;
+  endYear: number;
+  startDate: string;
+  endDate: string;
+  isActive?: boolean;
 }
 
 export interface Semester {
   id: number;
   name: string;
   schoolYearId: number;
+  startDate: string;
+  endDate: string;
   isActive: boolean;
   schoolYear?: SchoolYear;
+  _count?: { enrollments: number; scoreSheets: number; assignments: number };
+}
+
+export interface SemesterPayload {
+  name: string;
+  schoolYearId: number;
+  startDate: string;
+  endDate: string;
+  isActive?: boolean;
+}
+
+export interface Notification {
+  id: number;
+  title: string;
+  content: string;
+  targetRole: string | null;
+  className: string | null;
+  createdBy: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export interface TeacherNotificationClass {
+  id: number;
+  name: string;
+  classCode: string;
+  type: 'HOMEROOM' | 'SUBJECT';
+}
+
+export interface NotificationManage {
+  id: number;
+  title: string;
+  content: string;
+  targetRole: string | null;
+  createdBy: { fullName: string };
+  createdAt: string;
+  _count: { reads: number };
+}
+
+export interface NotificationPayload {
+  title: string;
+  content: string;
+  targetRole?: string;
+  classId?: number;
 }
 
 export interface GradeLevel {
@@ -909,7 +967,7 @@ export const academicApi = {
   async createConductBatch(semesterId: number, classId: number) {
     const response = await api.post<ApiSuccess<{ created: number; total: number }>>(
       '/conduct-assessments/batch',
-      null,
+      {},
       { params: { semesterId, classId } },
     );
     return getResponseData(response.data);
@@ -1064,6 +1122,64 @@ export const academicApi = {
     limit?: number;
   }) {
     const response = await api.get<ApiSuccess<AuditLogPage>>('/audit-logs', { params });
+    return getResponseData(response.data);
+  },
+
+  // ── Quản lý Năm học ─────────────────────────────────────────
+  async createAcademicYear(payload: AcademicYearPayload) {
+    const response = await api.post<ApiSuccess<SchoolYear>>('/academic-years', payload);
+    return getResponseData(response.data);
+  },
+
+  async updateAcademicYear(id: number, payload: Partial<AcademicYearPayload>) {
+    const response = await api.patch<ApiSuccess<SchoolYear>>(`/academic-years/${id}`, payload);
+    return getResponseData(response.data);
+  },
+
+  // ── Quản lý Học kỳ ──────────────────────────────────────────
+  async createSemester(payload: SemesterPayload) {
+    const response = await api.post<ApiSuccess<Semester>>('/semesters', payload);
+    return getResponseData(response.data);
+  },
+
+  async updateSemester(id: number, payload: Partial<SemesterPayload>) {
+    const response = await api.patch<ApiSuccess<Semester>>(`/semesters/${id}`, payload);
+    return getResponseData(response.data);
+  },
+
+  // ── Thông báo ────────────────────────────────────────────────
+  async getNotifications() {
+    const response = await api.get<ApiSuccess<Notification[]>>('/notifications');
+    return getResponseData(response.data);
+  },
+
+  async getTeacherNotificationClasses() {
+    const response = await api.get<ApiSuccess<TeacherNotificationClass[]>>('/notifications/teacher-classes');
+    return getResponseData(response.data);
+  },
+
+  async getUnreadCount() {
+    const response = await api.get<ApiSuccess<{ count: number }>>('/notifications/unread-count');
+    return getResponseData(response.data);
+  },
+
+  async getNotificationsManage() {
+    const response = await api.get<ApiSuccess<NotificationManage[]>>('/notifications/manage');
+    return getResponseData(response.data);
+  },
+
+  async createNotification(payload: NotificationPayload) {
+    const response = await api.post<ApiSuccess<NotificationManage>>('/notifications', payload);
+    return getResponseData(response.data);
+  },
+
+  async markNotificationRead(id: number) {
+    const response = await api.post<ApiSuccess<{ message: string }>>(`/notifications/${id}/read`, {});
+    return getResponseData(response.data);
+  },
+
+  async deleteNotification(id: number) {
+    const response = await api.delete<ApiSuccess<{ message: string }>>(`/notifications/${id}`);
     return getResponseData(response.data);
   },
 };
