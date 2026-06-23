@@ -65,7 +65,7 @@ export class ClassesService {
     return classItem;
   }
 
-  async getStudents(id: number, user: AuthenticatedUser) {
+  async getStudents(id: number, user: AuthenticatedUser, semesterId?: number) {
     const classItem = await this.prisma.class.findUnique({
       where: { id },
       select: { id: true },
@@ -80,6 +80,7 @@ export class ClassesService {
       where: {
         classId: id,
         status: 'ACTIVE',
+        ...(semesterId ? { semesterId } : {}),
       },
       include: {
         student: true,

@@ -674,10 +674,12 @@ export const academicApi = {
     return getResponseData(response.data);
   },
 
-  async getClassStudents(id: number) {
-    const response = await api.get<
-      ApiSuccess<ClassStudentRow[]>
-    >(`/classes/${id}/students`);
+  async getClassStudents(id: number, semesterId?: number) {
+    const params = semesterId ? { semesterId } : {};
+    const response = await api.get<ApiSuccess<ClassStudentRow[]>>(
+      `/classes/${id}/students`,
+      { params },
+    );
 
     return getResponseData(response.data);
   },
