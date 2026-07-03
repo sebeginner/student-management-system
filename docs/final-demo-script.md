@@ -180,7 +180,42 @@ cd ../frontend && npm run build
 
 ---
 
-### Bước 10 — Demo các use case mở rộng
+### Bước 10 — Demo Thông báo và Năm học
+
+#### UC7 — Quản lý Năm học & Học kỳ (giaovu01)
+
+1. Đăng nhập `giaovu01` → sidebar chọn **Năm học**.
+2. Thấy `2025-2026` đang active (badge xanh), hiển thị số học kỳ và số lớp.
+3. Nhấn **Thêm năm học** → điền `2026-2027`, năm `2026`–`2027`, ngày `2026-09-01` đến `2027-05-30`.
+4. Tích **Đặt làm năm học đang hoạt động** → cảnh báo vàng → Tạo → `2025-2026` tự chuyển inactive.
+5. Sidebar chọn **Học kỳ** → lọc `2026-2027` → chưa có HK nào.
+6. Thêm HK1 (`2026-09-01` đến `2027-01-15`, active) → thêm HK2 (không active) → danh sách hiện đúng.
+
+*Điểm thuyết trình:* Chỉ một năm học active tại một thời điểm. Chỉ một HK active trong cùng một năm học.
+
+#### UC8 — Hệ thống Thông báo
+
+**8a. Giáo vụ gửi thông báo toàn trường:**
+1. `giaovu01` → **Thông báo** → **Tạo thông báo**.
+2. Tiêu đề: "Nghỉ lễ 30/4 – 1/5"; Gửi đến: "Tất cả (toàn trường)" → **Gửi**.
+3. Thông báo xuất hiện ngay trong danh sách ✓
+
+**8b. Giáo viên gửi thông báo lớp:**
+1. Đăng nhập `teacher01` → **Thông báo** → **Tạo thông báo**.
+2. Form hiện dropdown **Gửi đến lớp** (không có targetRole): `10A1 (GVCN)`, `10A2 (GVBM)`.
+3. Nhập tiêu đề, nội dung → chọn `10A1 (GVCN)` → Gửi ✓
+4. *Demo lỗi:* cố gửi đến lớp 11A1 (không được phân công) → backend trả 403.
+
+**8c. Học sinh xem thông báo:**
+1. Đăng nhập `student01` (lớp 10A1) → header: badge chuông **4** (4 thông báo seed + 1 vừa tạo = 5 hoặc hơn tùy seed).
+2. Nhấn chuông → trang **Thông báo** → thấy thông báo nền xanh nhạt (chưa đọc).
+3. Nhấn "Nghỉ lễ 30/4" → nền trắng, badge giảm.
+4. Tab **Chưa đọc** → xác nhận số còn lại đúng.
+5. *Kiểm tra scope:* `student07` (lớp 10A2) **không thấy** thông báo lớp 10A1 của teacher01.
+
+---
+
+### Bước 11 — Demo các use case mở rộng
 
 #### UC1 — Hạnh kiểm (teacher01 → giaovu01)
 
@@ -248,7 +283,22 @@ cd ../frontend && npm run build
 
 ---
 
-## 5. Câu hỏi thường gặp khi vấn đáp
+## 5. Luồng phân quyền thông báo cần demo rõ
+
+### TEACHER không gửi thông báo đến lớp khác
+
+- Đăng nhập `teacher02` (GVCN 10A2, dạy Văn 10A1+10A2).
+- Vào **Thông báo** → **Tạo** → dropdown chỉ hiện: `10A1 (GVBM)`, `10A2 (GVCN)`.
+- `teacher02` **không thấy** lớp 11A1, 12A1 trong dropdown ✓
+
+### STUDENT chỉ thấy thông báo lớp mình
+
+- `student01` (10A1): thấy thông báo toàn trường + lớp 10A1.
+- `student07` (10A2): thấy thông báo toàn trường + lớp 10A2; **không thấy** thông báo lớp 10A1.
+
+---
+
+## 6. Câu hỏi thường gặp khi vấn đáp
 
 **Q: Tại sao không tạo role GVCN và GVBM riêng?**  
 A: Vì một giáo viên có thể vừa là GVCN vừa là GVBM nhiều lớp/môn khác nhau. Dùng `TeacherAssignment` linh hoạt hơn và tránh phải tạo nhiều tài khoản.
@@ -264,3 +314,9 @@ A: Có endpoint `POST /scores/sheets/:id/unlock` nhưng chỉ dành cho trườn
 
 **Q: Seed data có thể chạy nhiều lần không?**  
 A: Có, seed là idempotent — dùng `upsert` nên chạy nhiều lần không tạo bản trùng.
+
+**Q: Giáo viên gửi thông báo đến lớp mình — backend kiểm tra thế nào?**  
+A: Service kiểm tra `TeacherAssignment.findFirst({ where: { teacher: { user: { id: creatorId } }, classId, isActive: true } })`. Nếu không tìm thấy → `ForbiddenException`. Điều này đảm bảo giáo viên không thể bypass bằng cách truyền `classId` tùy ý.
+
+**Q: Số badge chuông tính thế nào?**  
+A: `unreadCount = tổng thông báo trong phạm vi user - số bản ghi NotificationRead của user đó`. Không dùng trường `isRead` trên Notification để tránh dữ liệu không nhất quán giữa nhiều người dùng.

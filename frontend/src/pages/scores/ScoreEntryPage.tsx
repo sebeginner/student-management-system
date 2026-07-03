@@ -159,7 +159,7 @@ export const ScoreEntryPage = () => {
     try {
       const sheetData = await academicApi.getScoreSheet(scoreSheetId);
       const [studentData, assignmentData] = await Promise.all([
-        academicApi.getClassStudents(sheetData.classId),
+        academicApi.getClassStudents(sheetData.classId, sheetData.semesterId),
         user?.role === 'TEACHER'
           ? academicApi.getMyTeacherAssignments()
           : Promise.resolve([]),

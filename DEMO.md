@@ -74,6 +74,20 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## Dữ liệu có sẵn
 
+### Thông báo có sẵn (seed)
+
+| # | Tiêu đề | Người gửi | Đối tượng | Ngày |
+|---|---------|-----------|-----------|------|
+| 1 | Lịch thi cuối kỳ HK2 năm học 2025-2026 | giaovu01 | Toàn trường | ~10 ngày trước |
+| 2 | Nhắc nhở nộp học phí học kỳ 2 | giaovu01 | Học sinh | ~45 ngày trước |
+| 3 | Họp phụ huynh HK2 – Lớp 10A1 | teacher01 | Học sinh lớp 10A1 | ~20 ngày trước |
+| 4 | Bù tiết Toán thứ Sáu – Lớp 10A1 | teacher01 | Học sinh lớp 10A1 | ~5 ngày trước |
+| 5 | Kiểm tra một tiết Văn – Lớp 10A2 | teacher02 | Học sinh lớp 10A2 | ~8 ngày trước |
+| 6 | Định hướng thi đại học 2026 – Lớp 12A1 | teacher04 | Học sinh lớp 12A1 | ~3 ngày trước |
+
+> **student01** (lớp 10A1) thấy TB số 1, 2, 3, 4 — badge chuông **4 chưa đọc**.  
+> **student07** (lớp 10A2) thấy TB số 1, 2, 5 — badge chuông **3 chưa đọc**.
+
 ### Lớp học (năm học 2025–2026)
 | Lớp | Khối | Sĩ số | Giáo viên chủ nhiệm |
 |-----|------|-------|---------------------|
@@ -130,6 +144,9 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 5. **Đặt lại mật khẩu** cho một tài khoản
 6. **Vai trò** → xem ma trận quyền hạn
 7. **Quy định / Tham số** → xem cấu hình năm học 2025-2026
+8. **Thông báo** → thấy biểu tượng chuông trên header, badge số thông báo chưa đọc
+   - Xem danh sách thông báo toàn trường + đúng role
+   - Nhấn vào thông báo → đánh dấu đã đọc → badge giảm
 
 ---
 
@@ -338,6 +355,71 @@ Giáo vụ duyệt (giaovu01)
 Học sinh xem kết quả (student01)
   → Điểm của tôi → thấy điểm đã được khóa
 ```
+
+---
+
+---
+
+### Luồng UC7 – Quản lý Năm học & Học kỳ
+
+**Thực hiện bởi:** `giaovu01` (ACADEMIC_STAFF)
+
+#### 7a. Tạo năm học mới
+1. Đăng nhập `giaovu01` → sidebar chọn **Năm học**
+2. Thấy năm học `2025-2026` đang hoạt động (badge xanh)
+3. Nhấn **Thêm năm học**:
+   - Tên: `2026-2027`
+   - Năm bắt đầu: `2026`, Năm kết thúc: `2027`
+   - Ngày bắt đầu: `2026-09-01`, Ngày kết thúc: `2027-05-30`
+   - Tích **Đặt làm năm học đang hoạt động** → xuất hiện cảnh báo vàng "Sẽ tắt các năm học khác"
+4. Nhấn **Tạo năm học** → `2026-2027` xuất hiện trong danh sách, badge xanh ✓
+5. Năm `2025-2026` tự động chuyển sang "Không hoạt động" ✓
+
+#### 7b. Tạo học kỳ cho năm mới
+6. Sidebar chọn **Học kỳ**
+7. Lọc theo năm `2026-2027` → chưa có học kỳ nào
+8. Nhấn **Thêm học kỳ**:
+   - Tên: `HK1`, chọn năm học `2026-2027`
+   - Ngày: `2026-09-01` đến `2027-01-15`
+   - Tích **Đặt làm học kỳ đang hoạt động**
+9. Tạo thêm `HK2` (`2027-01-16` đến `2027-05-30`) — **không** tích active
+10. Lọc lại danh sách → thấy HK1 active, HK2 không active ✓
+
+> **Lưu ý khi demo:** Reset lại `isActive` về `2025-2026` sau khi demo để seed vẫn hoạt động đúng.
+
+---
+
+### Luồng UC8 – Hệ thống Thông báo
+
+#### 8a. Học sinh xem thông báo (`student01`)
+1. Đăng nhập `student01` → header có biểu tượng chuông, **badge số 4** (4 thông báo chưa đọc)
+2. Nhấn chuông → chuyển đến trang **Thông báo**
+3. Thấy 4 thông báo, các thông báo chưa đọc có nền xanh nhạt và chấm tròn xanh
+4. Nhấn vào "Lịch thi cuối kỳ HK2" → nền trắng, chấm xanh biến mất → badge giảm còn 3
+5. Tab **Chưa đọc** → thấy đúng 3 thông báo còn lại
+6. Badge chuông trên header cập nhật → hiển thị **3**
+
+#### 8b. Giáo viên gửi thông báo lớp (`teacher01`)
+1. Đăng nhập `teacher01` → vào **Thông báo** → nhấn **Tạo thông báo**
+2. Form hiện dropdown **Gửi đến lớp** (không có targetRole) với các lớp teacher01 được phân công:
+   - `10A1 (GVCN)`, `10A2 (GVBM)`, ... 
+3. Nhập tiêu đề: `Nhắc nộp bài tập Toán tuần này`
+4. Nhập nội dung: `Học sinh lớp 10A1 nộp bài tập chương 5 trước thứ Sáu tuần này.`
+5. Chọn lớp **10A1 (GVCN)** → nhấn **Gửi thông báo** ✓
+6. Thử chọn lớp không được phân công → hệ thống từ chối (demo lỗi phân quyền)
+
+#### 8c. Kiểm tra phân quyền thông báo
+7. Đăng nhập `student07` (lớp 10A2) → vào **Thông báo**
+   - Thấy: "Lịch thi HK2" (toàn trường), "Nhắc học phí" (STUDENT), "Kiểm tra Văn 10A2" (lớp 10A2)
+   - **Không thấy** thông báo lớp 10A1 của teacher01 ✓
+8. Đăng nhập `teacher05` (GV Hóa, không CN, dạy 10A1+10A2) → tạo thông báo
+   - Dropdown lớp hiện: `10A1 (GVBM)`, `10A2 (GVBM)` ✓
+
+#### 8d. Giáo vụ quản lý thông báo (`giaovu01`)
+9. Đăng nhập `giaovu01` → **Thông báo** → nhấn **Tạo thông báo**
+   - Form có dropdown **Gửi đến** gồm tất cả role (không bị giới hạn lớp)
+   - Tạo thông báo "Nghỉ lễ 30/4 – 1/5" gửi đến **Tất cả (toàn trường)** ✓
+10. Thấy nút **Xoá** bên cạnh mỗi thông báo → xoá một thông báo cũ → biến mất khỏi danh sách
 
 ---
 

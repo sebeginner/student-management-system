@@ -7,7 +7,7 @@ Tài liệu trong thư mục `docs/` dùng để thống nhất cách hiểu gi�
 | File | Mục đích | Người dùng chính |
 |---|---|---|
 | `srs.md` | Đặc tả yêu cầu phần mềm: phạm vi, actor, chức năng FR/NFR | Cả nhóm, GVHD |
-| `use-cases.md` | 21 use case đã implement với luồng nghiệp vụ chi tiết | BA/PO, Backend, Frontend |
+| `use-cases.md` | 22 use case đã implement với luồng nghiệp vụ chi tiết | BA/PO, Backend, Frontend |
 | `business-rules.md` | Quy tắc nghiệp vụ cần validate trong service/backend | Backend, QA |
 | `api-spec.md` | Hợp đồng API: đầy đủ endpoint, request, response, quyền | Backend, Frontend |
 | `authorization.md` | Ma trận phân quyền, giải thích GVCN/GVBM scope | Backend, QA |

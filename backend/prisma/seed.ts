@@ -33,7 +33,7 @@ function genScore(perf: 1|2|3|4|5, sIdx: number, subIdx: number, testCode: strin
   const base = ({ 1: 3.5, 2: 5.1, 3: 6.5, 4: 7.8, 5: 9.1 } as Record<number, number>)[perf] ?? 6.5;
   const seed = (sIdx * 17 + subIdx * 11 + testCode.length * 5) % 20;
   const noise = (seed - 10) * 0.07;
-  return Math.min(10, Math.max(0, Math.round((base + noise) * 10) / 10));
+  return Math.min(10, Math.max(0, Math.round((base + noise) * 2) / 2));
 }
 
 function calcAvg(oral: number, onePeriod: number, midterm: number, final: number) {
@@ -721,6 +721,83 @@ async function main() {
     }
   }
 
+  // ── 18. Thông báo demo ────────────────────────────────────────
+  const upsertNotification = async (data: {
+    title: string; content: string; targetRole: string | null;
+    classId: number | null; createdById: number; daysAgo: number;
+  }) => {
+    const existing = await prisma.notification.findFirst({
+      where: { title: data.title, createdById: data.createdById },
+    });
+    const createdAt = t(data.daysAgo);
+    if (existing) {
+      return prisma.notification.update({
+        where: { id: existing.id },
+        data: { content: data.content, targetRole: data.targetRole, classId: data.classId, createdAt },
+      });
+    }
+    return prisma.notification.create({
+      data: {
+        title: data.title, content: data.content,
+        targetRole: data.targetRole, classId: data.classId,
+        createdById: data.createdById, createdAt,
+      },
+    });
+  };
+
+  const class10A1Id = classMap.get('10A1')!.id;
+  const class10A2Id = classMap.get('10A2')!.id;
+  const class12A1Id = classMap.get('12A1')!.id;
+
+  // Thông báo toàn trường từ giáo vụ
+  await upsertNotification({
+    title: 'Lịch thi cuối kỳ HK2 năm học 2025-2026',
+    content: 'Kỳ thi cuối học kỳ 2 sẽ diễn ra từ ngày 15/05/2026 đến 25/05/2026. Học sinh kiểm tra lịch thi cụ thể tại bảng thông báo trường hoặc liên hệ giáo vụ.',
+    targetRole: null, classId: null, createdById: staffUser.id, daysAgo: 10,
+  });
+
+  // Thông báo chỉ gửi học sinh từ giáo vụ
+  await upsertNotification({
+    title: 'Nhắc nhở nộp học phí học kỳ 2',
+    content: 'Hạn nộp học phí HK2 là ngày 28/02/2026. Học sinh chưa nộp vui lòng liên hệ phòng kế toán trước hạn để tránh ảnh hưởng đến quá trình học tập.',
+    targetRole: 'STUDENT', classId: null, createdById: staffUser.id, daysAgo: 45,
+  });
+
+  // Thông báo từ GVCN 10A1 gửi học sinh lớp 10A1
+  const t01User = await prisma.user.findUnique({ where: { username: 'teacher01' } });
+  if (t01User) {
+    await upsertNotification({
+      title: 'Họp phụ huynh học kỳ 2 – Lớp 10A1',
+      content: 'Buổi họp phụ huynh lớp 10A1 diễn ra vào thứ Bảy ngày 22/02/2026, lúc 8h00 tại phòng học 101. Đề nghị toàn thể học sinh thông báo cho phụ huynh tham dự đầy đủ.',
+      targetRole: 'STUDENT', classId: class10A1Id, createdById: t01User.id, daysAgo: 20,
+    });
+    await upsertNotification({
+      title: 'Bù tiết Toán thứ Sáu tuần này – Lớp 10A1',
+      content: 'Do tiết Toán thứ Ba bị nghỉ, thầy An sẽ bù vào thứ Sáu ngày 07/02/2026 tiết 4 tại phòng 101. Học sinh chuẩn bị đầy đủ sách vở.',
+      targetRole: 'STUDENT', classId: class10A1Id, createdById: t01User.id, daysAgo: 5,
+    });
+  }
+
+  // Thông báo từ GVCN 10A2 gửi học sinh lớp 10A2
+  const teacher02User = await prisma.user.findUnique({ where: { username: 'teacher02' } });
+  if (teacher02User) {
+    await upsertNotification({
+      title: 'Kiểm tra một tiết Văn – Lớp 10A2',
+      content: 'Lớp 10A2 có bài kiểm tra một tiết môn Ngữ Văn vào thứ Tư ngày 12/02/2026, tiết 2. Nội dung ôn tập: chương III và IV sách giáo khoa lớp 10.',
+      targetRole: 'STUDENT', classId: class10A2Id, createdById: teacher02User.id, daysAgo: 8,
+    });
+  }
+
+  // Thông báo từ GVCN 12A1 gửi học sinh lớp 12A1
+  const teacher04User = await prisma.user.findUnique({ where: { username: 'teacher04' } });
+  if (teacher04User) {
+    await upsertNotification({
+      title: 'Định hướng thi đại học & tư vấn tuyển sinh 2026 – Lớp 12A1',
+      content: 'Buổi tư vấn định hướng nghề nghiệp và tuyển sinh đại học dành cho lớp 12A1 sẽ diễn ra vào thứ Năm 06/03/2026, 14h00, tại hội trường A. Học sinh chuẩn bị câu hỏi để trao đổi với các chuyên gia tư vấn.',
+      targetRole: 'STUDENT', classId: class12A1Id, createdById: teacher04User.id, daysAgo: 3,
+    });
+  }
+
   // ─────────────────────────────────────────────────────────────
   console.log('\n✔ Seed hoàn tất.');
   console.log('──────────────────────────────────────────────────────');
@@ -743,6 +820,7 @@ async function main() {
   console.log('    DRAFT:   Hóa/10A1-HK1 (nhập 12/20 hs), Toán+Văn/10A1-HK2');
   console.log('  Yêu cầu sửa điểm: 1 PENDING (Toán/HK1/S003), 1 APPROVED (Văn/HK1/S001)');
   console.log('  Học kỳ: HK1 kết thúc, HK2 đang tiến hành');
+  console.log('  Thông báo: 2 toàn trường (giaovu01), 2 lớp 10A1 (teacher01), 1 lớp 10A2 (teacher02), 1 lớp 12A1 (teacher04)');
   console.log('──────────────────────────────────────────────────────');
   void phySheet10A1HK1; // suppress unused warning
 }

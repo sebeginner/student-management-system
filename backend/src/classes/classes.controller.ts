@@ -69,8 +69,15 @@ export class ClassesController {
   @Roles(...VIEW_ACADEMIC_ROLES)
   async getStudents(
     @Param('id', ParseIntPipe) id: number,
+    @Query('semesterId') semesterId: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return successResponse(await this.classesService.getStudents(id, user));
+    return successResponse(
+      await this.classesService.getStudents(
+        id,
+        user,
+        semesterId ? Number(semesterId) : undefined,
+      ),
+    );
   }
 }

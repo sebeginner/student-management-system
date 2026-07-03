@@ -95,11 +95,22 @@ Tài liệu này mô tả các use case đã implement trong hệ thống, bám 
 
 ---
 
-## UC-07. Quản lý dữ liệu nền
+## UC-07. Quản lý Năm học & Học kỳ
 
 - **Actor:** `ACADEMIC_STAFF`, `ADMIN`
-- **Mục tiêu:** Quản lý năm học, học kỳ, khối lớp, môn học.
-- **API:** `/academic-years`, `/semesters`, `/grade-levels`, `/subjects`
+- **Mục tiêu:** Tạo và cập nhật năm học, học kỳ qua giao diện; quản lý khối lớp và môn học.
+- **Luồng Năm học:**
+  1. Giáo vụ/Admin vào trang **Năm học** → xem danh sách kèm số học kỳ, số lớp.
+  2. Tạo năm học mới: tên, startYear, endYear, startDate, endDate, isActive.
+  3. Nếu `isActive = true`: hệ thống tự động set tất cả năm học khác thành `isActive = false` (trong transaction).
+  4. Cập nhật năm học: sửa tên, ngày, trạng thái.
+- **Luồng Học kỳ:**
+  1. Giáo vụ vào trang **Học kỳ** → lọc theo năm học.
+  2. Tạo học kỳ: tên (HK1/HK2), schoolYearId, startDate, endDate, isActive.
+  3. Nếu `isActive = true`: chỉ tắt học kỳ khác **trong cùng năm học** (không ảnh hưởng năm khác).
+- **Ngoại lệ:** `startYear >= endYear`; `startDate >= endDate`; tên năm học/học kỳ trùng.
+- **API:** `GET/POST/PATCH /academic-years`, `GET/POST/PATCH /semesters`
+- **Frontend:** `/academic-years`, `/semesters` (ADMIN + ACADEMIC_STAFF)
 
 ---
 
@@ -284,3 +295,34 @@ Tài liệu này mô tả các use case đã implement trong hệ thống, bám 
   2. Lọc theo loại đối tượng, hành động, khoảng ngày.
   3. Xem mô tả ngôn ngữ tự nhiên của từng thao tác.
 - **API:** `GET /audit-logs`
+
+---
+
+## UC-22. Hệ thống Thông báo
+
+- **Actor tạo:** `ADMIN`, `ACADEMIC_STAFF`, `MANAGER`, `TEACHER`
+- **Actor xem:** Tất cả 5 roles
+- **Actor xoá:** `ADMIN`, `ACADEMIC_STAFF`
+- **Mục tiêu:** Gửi thông báo nội bộ theo phạm vi (toàn trường / theo role / theo lớp).
+- **Luồng xem:**
+  1. Người dùng thấy biểu tượng chuông trên header với badge số thông báo chưa đọc.
+  2. Nhấn chuông hoặc vào menu **Thông báo** → xem danh sách.
+  3. Nhấn vào thông báo → đánh dấu đã đọc → badge giảm.
+  4. Lọc "Chưa đọc" để xem thông báo còn mới.
+- **Luồng tạo (ACADEMIC_STAFF / MANAGER):**
+  1. Nhấn **Tạo thông báo** → điền tiêu đề, nội dung.
+  2. Chọn **Gửi đến**: Tất cả / Học sinh / Giáo viên / Giáo vụ / BGH / Admin.
+  3. Gửi → thông báo xuất hiện ngay cho đối tượng nhận.
+- **Luồng tạo (TEACHER) — có ràng buộc lớp:**
+  1. Nhấn **Tạo thông báo** → form hiện dropdown **Gửi đến lớp** (không có targetRole).
+  2. Dropdown chỉ liệt kê lớp giáo viên đó được phân công (HOMEROOM hoặc SUBJECT).
+  3. Backend kiểm tra `TeacherAssignment` — từ chối nếu classId không hợp lệ.
+  4. Thông báo chỉ gửi đến học sinh (`targetRole = 'STUDENT'`) của lớp đã chọn.
+- **Quy tắc hiển thị:**
+  - `classId = null && targetRole = null` → tất cả thấy.
+  - `classId = null && targetRole = X` → chỉ role X thấy.
+  - `classId = N && targetRole = 'STUDENT'` → học sinh đang học lớp N thấy.
+  - TEACHER thấy thêm thông báo của tất cả lớp mình phụ trách.
+- **Ngoại lệ:** TEACHER gửi đến lớp không được phân công → `403 ForbiddenException`.
+- **API:** `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications`, `POST /notifications/:id/read`, `GET /notifications/manage`, `DELETE /notifications/:id`, `GET /notifications/teacher-classes`
+- **Frontend:** `/notifications` (tất cả roles); bell icon + badge trên header

@@ -113,7 +113,6 @@ export class ImportService {
       include: {
         class: true, subject: true,
         semester: { include: { schoolYear: true } },
-        studentScores: { include: { student: { select: { studentCode: true } } } },
       },
     });
     if (!sheet) throw new BadRequestException('Bảng điểm không tồn tại');
@@ -123,7 +122,12 @@ export class ImportService {
     const minScore = params?.minScore ?? 0;
     const maxScore = params?.maxScore ?? 10;
 
-    const enrolledCodes = new Set(sheet.studentScores.map(ss => ss.student.studentCode));
+    // Lấy danh sách học sinh đang enrolled trong lớp/kỳ (không phụ thuộc vào record điểm đã có)
+    const enrollments = await this.prisma.studentClassEnrollment.findMany({
+      where: { classId: sheet.classId, semesterId: sheet.semesterId, status: 'ACTIVE' },
+      include: { student: { select: { studentCode: true } } },
+    });
+    const enrolledCodes = new Set(enrollments.map(e => e.student.studentCode));
     const rows = this.parseXlsx<Record<string, string | number>>(buffer);
     const valid: ScoreImportRow[] = [];
     const errors: ImportError[] = [];
@@ -166,26 +170,32 @@ export class ImportService {
   async commitScoreImport(rows: ScoreImportRow[], sheetId: number): Promise<{ updated: number }> {
     const sheet = await this.prisma.scoreSheet.findUnique({
       where: { id: sheetId },
-      include: {
-        semester: true,
-        studentScores: {
-          include: {
-            student: { select: { studentCode: true } },
-            scoreDetails: { include: { testType: true } },
-          },
-        },
-      },
+      include: { semester: true },
     });
     if (!sheet) throw new BadRequestException('Bảng điểm không tồn tại');
     if (sheet.status !== 'DRAFT') throw new BadRequestException('Chỉ import khi DRAFT');
+
+    // Lấy studentId theo studentCode từ enrollment thực tế
+    const enrollments = await this.prisma.studentClassEnrollment.findMany({
+      where: { classId: sheet.classId, semesterId: sheet.semesterId, status: 'ACTIVE' },
+      include: { student: { select: { id: true, studentCode: true } } },
+    });
+    const studentByCode = new Map(enrollments.map(e => [e.student.studentCode, e.student.id]));
 
     const testTypes = await this.prisma.testType.findMany();
     const ttByCode = new Map(testTypes.map(t => [t.code, t]));
 
     let updated = 0;
     for (const row of rows) {
-      const ss = sheet.studentScores.find(s => s.student.studentCode === row.studentCode);
-      if (!ss) continue;
+      const studentId = studentByCode.get(row.studentCode);
+      if (!studentId) continue;
+
+      // Upsert StudentSubjectScore – tạo mới nếu chưa có record
+      const ss = await this.prisma.studentSubjectScore.upsert({
+        where: { scoreSheetId_studentId: { scoreSheetId: sheetId, studentId } },
+        update: {},
+        create: { scoreSheetId: sheetId, studentId },
+      });
 
       for (const [code, value] of Object.entries(row) as [string, number][]) {
         if (code === 'studentCode' || value === undefined) continue;
@@ -210,6 +220,29 @@ export class ImportService {
           },
         });
       }
+
+      // Recalculate averageScore
+      const details = await this.prisma.scoreDetail.findMany({
+        where: { studentSubjectScoreId: ss.id },
+        include: { testType: true },
+      });
+      const totalWeight = details.reduce((sum, d) => sum + d.weightSnapshot, 0);
+      const weightedSum = details.reduce((sum, d) => sum + d.score * d.weightSnapshot, 0);
+      const averageScore = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) / 100 : null;
+
+      const passScore = await this.prisma.systemParameter.findUnique({
+        where: { schoolYearId: sheet.semester.schoolYearId },
+        select: { subjectPassScore: true },
+      });
+      await this.prisma.studentSubjectScore.update({
+        where: { id: ss.id },
+        data: {
+          averageScore,
+          passStatus: averageScore === null ? null : averageScore >= (passScore?.subjectPassScore ?? 5),
+          calculatedAt: new Date(),
+        },
+      });
+
       updated++;
     }
     return { updated };
