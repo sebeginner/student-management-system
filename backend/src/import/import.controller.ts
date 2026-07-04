@@ -14,7 +14,9 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { AuthenticatedUser } from '../auth/types';
 import { successResponse } from '../common/api-response';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -72,9 +74,10 @@ export class ImportController {
   async previewScoreImport(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!file) throw new Error('No file uploaded');
-    return successResponse(await this.importService.previewScoreImport(file.buffer, id));
+    return successResponse(await this.importService.previewScoreImport(file.buffer, id, user));
   }
 
   @Post('scores/sheets/:id/import/commit')
@@ -82,9 +85,10 @@ export class ImportController {
   async commitScoreImport(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { data: ScoreImportRow[] },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return successResponse(
-      await this.importService.commitScoreImport(body.data, id),
+      await this.importService.commitScoreImport(body.data, id, user),
       'Import điểm thành công',
     );
   }
