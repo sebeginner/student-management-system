@@ -7,12 +7,14 @@ import {
   Bell,
   BookCheck,
   BookOpen,
+  BookText,
   CalendarDays,
   ClipboardList,
   FilePenLine,
   GraduationCap,
   History,
   Home,
+  Layers,
   MessageSquareWarning,
   School,
   Search,
@@ -48,6 +50,8 @@ const menuByRole: Record<UserRole, MenuItem[]> = {
     // Cấu trúc học vụ
     { label: 'Năm học',             to: '/academic-years',       icon: BookOpen    },
     { label: 'Học kỳ',              to: '/semesters',            icon: CalendarDays },
+    { label: 'Khối lớp',            to: '/grade-levels',         icon: Layers      },
+    { label: 'Môn học',             to: '/subjects',             icon: BookText    },
     { label: menuLabels.classes,    to: '/classes',              icon: School      },
     { label: menuLabels.students,   to: '/students',             icon: GraduationCap },
     // Nhân sự

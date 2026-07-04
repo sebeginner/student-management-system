@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as XLSX from 'xlsx';
+import { AuthenticatedUser } from '../auth/types';
+import { PermissionScopeService } from '../authorization/permission-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface ImportError { row: number; field: string; message: string; }
@@ -25,7 +27,10 @@ export interface ScoreImportRow {
 
 @Injectable()
 export class ImportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly permissionScope: PermissionScopeService,
+  ) {}
 
   // ─── Student Import ─────────────────────────────────────────────────────────
 
@@ -103,7 +108,7 @@ export class ImportService {
 
   // ─── Score Import ────────────────────────────────────────────────────────────
 
-  async previewScoreImport(buffer: Buffer, sheetId: number): Promise<{
+  async previewScoreImport(buffer: Buffer, sheetId: number, user: AuthenticatedUser): Promise<{
     valid: ScoreImportRow[];
     errors: ImportError[];
     sheetInfo: { className: string; subjectName: string; semesterName: string };
@@ -117,6 +122,13 @@ export class ImportService {
     });
     if (!sheet) throw new BadRequestException('Bảng điểm không tồn tại');
     if (sheet.status !== 'DRAFT') throw new BadRequestException('Chỉ import khi bảng điểm ở trạng thái DRAFT');
+    await this.permissionScope.canEditSubjectScore(
+      user,
+      sheet.classId,
+      sheet.subjectId,
+      sheet.semesterId,
+      sheet.status,
+    );
 
     const params = await this.prisma.systemParameter.findUnique({ where: { schoolYearId: sheet.semester.schoolYearId } });
     const minScore = params?.minScore ?? 0;
@@ -167,13 +179,20 @@ export class ImportService {
     };
   }
 
-  async commitScoreImport(rows: ScoreImportRow[], sheetId: number): Promise<{ updated: number }> {
+  async commitScoreImport(rows: ScoreImportRow[], sheetId: number, user: AuthenticatedUser): Promise<{ updated: number }> {
     const sheet = await this.prisma.scoreSheet.findUnique({
       where: { id: sheetId },
       include: { semester: true },
     });
     if (!sheet) throw new BadRequestException('Bảng điểm không tồn tại');
     if (sheet.status !== 'DRAFT') throw new BadRequestException('Chỉ import khi DRAFT');
+    await this.permissionScope.canEditSubjectScore(
+      user,
+      sheet.classId,
+      sheet.subjectId,
+      sheet.semesterId,
+      sheet.status,
+    );
 
     // Lấy studentId theo studentCode từ enrollment thực tế
     const enrollments = await this.prisma.studentClassEnrollment.findMany({
