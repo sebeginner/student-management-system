@@ -3,6 +3,8 @@ import { MainLayout } from '../components/layout/MainLayout';
 import Login from '../Login';
 import { AcademicYearsPage } from '../pages/academic-years/AcademicYearsPage';
 import { SemestersPage } from '../pages/semesters/SemestersPage';
+import { GradeLevelsPage } from '../pages/grade-levels/GradeLevelsPage';
+import { SubjectsPage } from '../pages/subjects/SubjectsPage';
 import { NotificationsPage } from '../pages/notifications/NotificationsPage';
 import { ClassDetailPage } from '../pages/classes/ClassDetailPage';
 import { ClassesPage } from '../pages/classes/ClassesPage';
@@ -44,6 +46,8 @@ export const AppRouter = () => {
           <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'ACADEMIC_STAFF']} />}>
             <Route path="academic-years" element={<AcademicYearsPage />} />
             <Route path="semesters" element={<SemestersPage />} />
+            <Route path="grade-levels" element={<GradeLevelsPage />} />
+            <Route path="subjects" element={<SubjectsPage />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="users" element={<UsersPage />} />

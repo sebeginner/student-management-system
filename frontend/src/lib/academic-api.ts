@@ -84,6 +84,13 @@ export interface GradeLevel {
   name: string;
   level: number;
   isActive: boolean;
+  _count?: { classes: number };
+}
+
+export interface GradeLevelPayload {
+  name: string;
+  level: number;
+  isActive?: boolean;
 }
 
 export interface Subject {
@@ -93,6 +100,15 @@ export interface Subject {
   coefficient: number;
   description?: string | null;
   isActive: boolean;
+  _count?: { teachers: number; assignments: number; scoreSheets: number };
+}
+
+export interface SubjectPayload {
+  subjectCode: string;
+  name: string;
+  coefficient?: number;
+  description?: string;
+  isActive?: boolean;
 }
 
 export interface Teacher {
@@ -1146,6 +1162,28 @@ export const academicApi = {
 
   async updateSemester(id: number, payload: Partial<SemesterPayload>) {
     const response = await api.patch<ApiSuccess<Semester>>(`/semesters/${id}`, payload);
+    return getResponseData(response.data);
+  },
+
+  // ── Quản lý Khối lớp ─────────────────────────────────────────
+  async createGradeLevel(payload: GradeLevelPayload) {
+    const response = await api.post<ApiSuccess<GradeLevel>>('/grade-levels', payload);
+    return getResponseData(response.data);
+  },
+
+  async updateGradeLevel(id: number, payload: Partial<GradeLevelPayload>) {
+    const response = await api.patch<ApiSuccess<GradeLevel>>(`/grade-levels/${id}`, payload);
+    return getResponseData(response.data);
+  },
+
+  // ── Quản lý Môn học ──────────────────────────────────────────
+  async createSubject(payload: SubjectPayload) {
+    const response = await api.post<ApiSuccess<Subject>>('/subjects', payload);
+    return getResponseData(response.data);
+  },
+
+  async updateSubject(id: number, payload: Partial<SubjectPayload>) {
+    const response = await api.patch<ApiSuccess<Subject>>(`/subjects/${id}`, payload);
     return getResponseData(response.data);
   },
 
