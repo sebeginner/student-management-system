@@ -7,7 +7,6 @@ import {
   type Semester,
 } from '../../lib/academic-api';
 import { getApiErrorMessage } from '../../lib/api';
-import { useAuthStore } from '../../lib/auth-store';
 import { useToastStore } from '../../lib/toast-store';
 import { menuLabels } from '../../lib/uiText';
 
@@ -33,7 +32,6 @@ const RATING_COLORS: Record<string, string> = {
 };
 
 export const ConductAssessmentPage = () => {
-  const user = useAuthStore((s) => s.user);
   const showToast = useToastStore((s) => s.showToast);
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -114,8 +112,6 @@ export const ConductAssessmentPage = () => {
       showToast(getApiErrorMessage(err), 'error');
     }
   };
-
-  const selectedClassName = classes.find(c => String(c.id) === selectedClass)?.name;
 
   return (
     <section className="space-y-5">
@@ -246,8 +242,6 @@ export const ConductAssessmentPage = () => {
           </label>
         </div>
       ) : null}
-
-      {void user, void selectedClassName}
     </section>
   );
 };
